@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>FinDobe · THE-FIN</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="legacy.css">
+<link rel="stylesheet" href="brand.css">
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand"><img src="assets/the-fin-logo.png" alt="THE-FIN"><div><strong>FinDobe</strong><small>THE-FIN / DOCUMENTS</small></div></div>
+    <button id="btnOpen" type="button">Datei öffnen…</button>
+    <input id="legacyOpen" type="file" accept=".html,.htm,.pdf,.md,.markdown,.txt,text/html,application/pdf,text/markdown,text/plain">
+    <div id="zoomCtl">
+      <button id="zoomOut" type="button" class="pdfonly" title="Verkleinern">−</button>
+      <span id="zoomVal" class="pdfonly">100 %</span>
+      <button id="zoomIn" type="button" class="pdfonly" title="Vergrößern">+</button>
+      <button id="zoomFit" type="button" class="pdfonly" title="An Fensterbreite anpassen">Anpassen</button>
+      <button id="btnExpHtml" type="button" class="exponly" title="Aktuelles Dokument als HTML-Datei herunterladen">Export HTML</button>
+      <button id="btnSearch" type="button" class="exponly" title="Im Dokument suchen">Suchen</button>
+      <button id="btnSaveAs" type="button" class="exponly">Speichern unter…</button>
+      <button id="btnExpPdf" type="button" class="exponly" title="Dokument über den Systemdialog als PDF speichern">Als PDF exportieren</button>
+      <button id="btnExpDocx" type="button" class="exponly" title="Aktuelles Dokument als Word-Datei (.docx) herunterladen">Export Word</button>
+      <button id="btnSave" type="button" disabled>Speichern</button>
+    </div>
+  </header>
+  <div id="documentbar"><div><span id="fileType">DOKUMENT</span><span id="fileName">Dein Platz für klare Dokumente.</span></div><span id="status" class="neutral">Lokal auf deinem Computer</span></div>
+  <div id="errorbar" hidden></div>
+  <div id="noticebar" hidden></div>
+  <div id="findbar" hidden>
+    <input id="findInput" type="text" placeholder="Suchen…" spellcheck="false">
+    <span id="findCount"></span>
+    <button id="findPrev" type="button" title="Vorheriger Treffer (Shift+Enter)">↑</button>
+    <button id="findNext" type="button" title="Nächster Treffer (Enter)">↓</button>
+    <button id="findCase" type="button" title="Groß-/Kleinschreibung beachten">Aa</button>
+    <span class="replonly">
+      <input id="replInput" type="text" placeholder="Ersetzen durch…" spellcheck="false">
+      <button id="replOne" type="button" title="Aktuellen Treffer ersetzen (Enter im Ersetzen-Feld)">Ersetzen</button>
+      <button id="replAll" type="button" title="Alle Treffer ersetzen (ein Undo-Schritt)">Alle</button>
+    </span>
+    <button id="findClose" type="button" title="Schließen (Esc)">×</button>
+  </div>
+  <div id="dropzone">
+    <div class="box" id="dropzoneBox">
+      <div class="eyebrow">WENIGER TECHNIK. MEHR INHALT.</div>
+      <h1>Dein Dokument.<br><em>Direkt bearbeitbar.</em></h1>
+      <p class="intro">HTML und Markdown lesen, Text anklicken, ändern.<br>So einfach, wie es sein sollte.</p>
+      <span class="open-cta">Dokument öffnen <span>↗</span></span>
+      <p class="fileformats">HTML <span>·</span> MARKDOWN <span>·</span> TEXT</p>
+      <div class="steps"><div><b>01</b><span>Öffnen & lesen</span></div><div><b>02</b><span>Text direkt ändern</span></div><div><b>03</b><span>Speichern oder PDF</span></div></div>
+      <div class="recent" id="recentList" hidden></div>
+    </div>
+  </div>
+  <div id="scroller"><div id="pages"></div></div>
+  <div id="hWrap"><nav id="hOutline"></nav><iframe id="hviewer" title="HTML-Dokument" sandbox="allow-same-origin allow-scripts"></iframe></div>
+  <div id="mdWrap"><nav id="mdOutline"></nav><iframe id="mviewer" title="Markdown-Dokument" sandbox="allow-same-origin allow-scripts"></iframe></div>
+  <div id="dropOverlay" hidden><div class="inner">Datei hier ablegen</div></div>
+  <div id="busy"></div>
+  <footer><span id="hint">Öffne ein Dokument, um loszulegen.</span><span>THE-FIN <b>•</b> FinDobe 0.1</span></footer>
+  <dialog id="unsavedDialog"><h2>Änderungen behalten?</h2><p>Das aktuelle Dokument enthält Änderungen, die noch nicht gespeichert sind.</p><div><button data-choice="cancel">Abbrechen</button><button data-choice="discard">Verwerfen</button><button class="primary" data-choice="save">Speichern</button></div></dialog>
+<script src="pdf.js"></script>
+<script src="pdf-lib.js"></script>
+<script src="pdf-worker-data.js"></script>
+<script src="editor.js"></script>
+<script src="purify.min.js"></script>
+<script src="native.js"></script>
+</body>
+</html>
