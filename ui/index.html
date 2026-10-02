@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="assets/fonts.css">
 <link rel="stylesheet" href="legacy.css">
 <link rel="stylesheet" href="brand.css">
+<link rel="stylesheet" href="markdown.css">
 </head>
 <body>
   <header id="topbar">
@@ -26,8 +27,9 @@
       <button id="btnSave" type="button" disabled>Speichern</button>
     </div>
   </header>
-  <div id="documentbar"><div><span id="fileType">DOKUMENT</span><span id="fileName">Dein Platz für klare Dokumente.</span></div><span id="status" class="neutral">Lokal auf deinem Computer</span></div>
+  <div id="documentbar"><div class="document-name"><span id="fileType">DOKUMENT</span><span id="fileName">Keine Datei geöffnet</span></div><div id="htmlViewSwitch" role="group" aria-label="HTML-Ansicht" hidden><button id="btnEditView" type="button" aria-pressed="true">Bearbeiten</button><button id="btnPreviewView" type="button" aria-pressed="false">Vorschau</button></div><span id="status" class="neutral">Offline</span></div>
   <div id="errorbar" hidden></div>
+  <div id="markdownToolbar" hidden><div id="mdViewSwitch" role="group" aria-label="Markdown-Ansicht"><button data-md-view="write" aria-pressed="true">Schreiben</button><button data-md-view="source" aria-pressed="false">Quelltext</button><button data-md-view="preview" aria-pressed="false">Vorschau</button></div><span># Überschrift <span>·</span> **fett** <span>·</span> - Liste</span></div>
   <div id="noticebar" hidden></div>
   <div id="findbar" hidden>
     <input id="findInput" type="text" placeholder="Suchen…" spellcheck="false">
@@ -44,27 +46,29 @@
   </div>
   <div id="dropzone">
     <div class="box" id="dropzoneBox">
-      <div class="eyebrow">WENIGER TECHNIK. MEHR INHALT.</div>
-      <h1>Dein Dokument.<br><em>Direkt bearbeitbar.</em></h1>
-      <p class="intro">HTML und Markdown lesen, Text anklicken, ändern.<br>So einfach, wie es sein sollte.</p>
-      <span class="open-cta">Dokument öffnen <span>↗</span></span>
-      <p class="fileformats">HTML <span>·</span> MARKDOWN <span>·</span> TEXT</p>
-      <div class="steps"><div><b>01</b><span>Öffnen & lesen</span></div><div><b>02</b><span>Text direkt ändern</span></div><div><b>03</b><span>Speichern oder PDF</span></div></div>
+      <h1 id="startupTitle" aria-label="The Future is Now."><span class="type-line" aria-hidden="true"><span class="typed-text">The Future is Now.</span></span></h1>
+      <button id="btnStartOpen" type="button" class="open-cta">Datei öffnen… <span aria-hidden="true">↗</span></button>
+      <p class="fileformats">HTML <span>·</span> PDF <span>·</span> MARKDOWN <span>·</span> TEXT</p>
       <div class="recent" id="recentList" hidden></div>
     </div>
   </div>
   <div id="scroller"><div id="pages"></div></div>
   <div id="hWrap"><nav id="hOutline"></nav><iframe id="hviewer" title="HTML-Dokument" sandbox="allow-same-origin allow-scripts"></iframe></div>
+  <div id="previewWrap" hidden><iframe id="previewViewer" title="HTML-Vorschau – nur lesen" sandbox="allow-same-origin allow-scripts"></iframe></div>
   <div id="mdWrap"><nav id="mdOutline"></nav><iframe id="mviewer" title="Markdown-Dokument" sandbox="allow-same-origin allow-scripts"></iframe></div>
+  <div id="markdownWorkspace" hidden><div id="markdownEditor"></div><iframe id="markdownPreview" title="Markdown-Vorschau – nur lesen" sandbox="allow-same-origin allow-scripts" hidden></iframe></div>
   <div id="dropOverlay" hidden><div class="inner">Datei hier ablegen</div></div>
   <div id="busy"></div>
-  <footer><span id="hint">Öffne ein Dokument, um loszulegen.</span><span>THE-FIN <b>•</b> FinDobe 0.1</span></footer>
+  <footer><span id="hint">HTML-, PDF- oder Markdown-Datei öffnen.</span><span>THE-FIN <b>•</b> FinDobe 0.3.0</span></footer>
   <dialog id="unsavedDialog"><h2>Änderungen behalten?</h2><p>Das aktuelle Dokument enthält Änderungen, die noch nicht gespeichert sind.</p><div><button data-choice="cancel">Abbrechen</button><button data-choice="discard">Verwerfen</button><button class="primary" data-choice="save">Speichern</button></div></dialog>
+  <dialog id="deleteSectionDialog" aria-labelledby="deleteSectionTitle" aria-describedby="deleteSectionDescription"><h2 id="deleteSectionTitle">Abschnitt löschen?</h2><p id="deleteSectionName"></p><p id="deleteSectionDescription">Die Überschrift und der zugehörige Inhalt werden entfernt. Rückgängig mit ⌘Z / Strg+Z. Die Datei wird erst beim Speichern geändert.</p><div><button data-delete-choice="cancel" autofocus>Abbrechen</button><button data-delete-choice="delete" class="danger">Abschnitt löschen</button></div></dialog>
 <script src="pdf.js"></script>
 <script src="pdf-lib.js"></script>
 <script src="pdf-worker-data.js"></script>
 <script src="editor.js"></script>
 <script src="purify.min.js"></script>
+<script src="markdown-editor.js"></script>
+<script src="native-file-open.js"></script>
 <script src="native.js"></script>
 </body>
 </html>

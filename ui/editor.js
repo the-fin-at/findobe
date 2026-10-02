@@ -1762,9 +1762,6 @@ function undoKeyHandler(e){
 window.addEventListener('keydown',undoKeyHandler);
 
 /* --- HTML: Elemente löschen (Absatz, Listenpunkt, Zeile …) --- */
-const H_DELETABLE='p,li,h1,h2,h3,h4,h5,h6,tr,blockquote,text';
-const H_DEL_EXT=H_DELETABLE+',div,section,article,aside,figure,ul,ol,table';
-const H_DEL_PARENT=H_DEL_EXT+',g';   // v2.8: ⌃ darf auf SVG-Gruppen erweitern; Hover auf bloße Formen zeigt keinen Knopf
 let delExpanded=false,delHighlighted=null,delPrevOutline='',delPrevOffset='';
 function delUnhighlight(){
   if(delHighlighted){
@@ -1779,15 +1776,6 @@ function delHighlight(el){
   delPrevOutline=el.style.outline; delPrevOffset=el.style.outlineOffset;
   el.style.outline='2px dashed rgba(220,38,38,.85)';
   el.style.outlineOffset='2px';
-}
-function delParentOf(el){
-  const doc=el.ownerDocument;
-  let p=el.parentElement;
-  while(p&&p!==doc.body&&p!==doc.documentElement){
-    if(p.matches&&p.matches(H_DEL_PARENT))return p;
-    p=p.parentElement;
-  }
-  return null;
 }
 function delDescribe(el){
   const tag=el.tagName.toLowerCase();
@@ -1956,71 +1944,10 @@ function hDeleteFlow(el){
   if(!findBar.hidden&&findInput.value)findRun();
   flash('Gelöscht – '+KEY_SAVE+' schreibt in die Datei, '+(IS_MAC?'⌘Z':'Strg+Z')+' macht rückgängig');
 }
-function makeDelBtn(doc){
-  // Bewusst ohne Text-Nodes gebaut (Symbole aus Balken), damit alignRuns
-  // die Text-Zuordnung nicht verliert. Zwei Knöpfe: ⌃ erweitert die Auswahl
-  // auf den umgebenden Block, × löscht das aktuelle Ziel.
-  const wrap=doc.createElement('div');
-  wrap.id='voxDelBtn';
-  wrap.setAttribute('data-voxui','1');
-  wrap.style.cssText='position:fixed;z-index:2147483646;display:none;white-space:nowrap;';
-  const cell=(bg,title)=>{
-    const c=doc.createElement('div');
-    c.title=title;
-    c.style.cssText='position:relative;display:inline-block;width:22px;height:22px;border-radius:6px;'
-      +'background:'+bg+';box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer;margin-left:3px;vertical-align:top;';
-    wrap.appendChild(c);
-    return c;
-  };
-  const up=cell('#475569','Auswahl auf umgebenden Block erweitern (z. B. ganze Zeile/Liste)');
-  for(const [x,rot] of [[3,-45],[9,45]]){
-    const bar=doc.createElement('div');
-    bar.style.cssText='position:absolute;left:'+x+'px;top:10px;width:10px;height:2px;background:#fff;border-radius:1px;transform:rotate('+rot+'deg);';
-    up.appendChild(bar);
-  }
-  const x=cell('#dc2626','Aktuelles Ziel löschen');
-  for(const rot of[45,-45]){
-    const bar=doc.createElement('div');
-    bar.style.cssText='position:absolute;left:4px;top:10px;width:14px;height:2px;background:#fff;border-radius:1px;transform:rotate('+rot+'deg);';
-    x.appendChild(bar);
-  }
-  up.addEventListener('mousedown',ev=>{
-    ev.preventDefault(); ev.stopPropagation();
-    if(!delTarget)return;
-    const p=delParentOf(delTarget);
-    if(!p)return;
-    delTarget=p; delExpanded=true;
-    delHighlight(p);
-    positionDelBtn();
-  });
-  x.addEventListener('mousedown',ev=>{ ev.preventDefault(); ev.stopPropagation(); if(delTarget)hDeleteFlow(delTarget); });
-  wrap._up=up;
-  (doc.body||doc.documentElement).appendChild(wrap);
-  return wrap;
-}
-function positionDelBtn(){
-  if(!delBtn||!delTarget)return;
-  const r=delTarget.getBoundingClientRect();
-  delBtn.style.left=Math.max(0,r.right-56)+'px';
-  delBtn.style.top=Math.max(0,r.top+2)+'px';
-  delBtn.style.display='block';
-  if(delBtn._up)delBtn._up.style.display=delParentOf(delTarget)?'inline-block':'none';
-}
 function hideDelBtn(){
   if(delBtn)delBtn.style.display='none';
   delTarget=null; delExpanded=false;
   delUnhighlight();
-}
-function moveDelBtn(e){
-  if(!delBtn)return;
-  const t=e.target;
-  if(t===delBtn||(delBtn.contains&&delBtn.contains(t)))return;   // über den Knöpfen selbst: anlassen
-  // erweiterte Auswahl behalten, solange die Maus im Ziel bleibt
-  if(delExpanded&&delTarget&&delTarget.contains&&delTarget.contains(t)){positionDelBtn();return;}
-  const el=t&&t.closest?t.closest(H_DEL_EXT):null;
-  if(!el||(editSpan&&el.contains(editSpan))||(el.closest&&el.closest('[data-voxui]'))){hideDelBtn();return;}
-  if(el!==delTarget){ delTarget=el; delExpanded=false; delUnhighlight(); }
-  positionDelBtn();
 }
 
 /* ---------- PDF-Seitenoperationen (Phase 3): drehen / löschen / umsortieren ----------
@@ -2299,6 +2226,7 @@ function deviceFontPx(page,item){
 
 async function startEdit(page,item){
   await closeEditBox(true);
+  if(editState)return;
   const box=itemDeviceBox(page,item);
   const input=document.createElement('input');
   input.type='text'; input.id='editBox'; input.value=item.text;
@@ -2381,8 +2309,8 @@ async function closeEditBox(apply){
   const font=page.fonts.get(item.fontRes);
   const enc=encodeTextToCodes(font,newText);
   if(enc.missing.length){
-    showEditErr('Diese Zeichen sind in der eingebetteten Schrift („'+(font.baseFont||item.fontRes)
-      +'“) nicht verfügbar: <b>'+enc.missing.map(x=>x===' '?'Leerzeichen':x).join(' ')
+    showEditErr('Diese Zeichen sind in der eingebetteten Schrift („'+escHtml(font.baseFont||item.fontRes)
+      +'“) nicht verfügbar: <b>'+escHtml(enc.missing.map(x=>x===' '?'Leerzeichen':x).join(' '))
       +'</b><br>PDF-Subset-Schriften enthalten nur die im Dokument benutzten Zeichen. Bitte Formulierung anpassen.',
       [{label:'Weiter bearbeiten',primary:true,fn:()=>{clearEditErr();input.focus();}},
        {label:'Verwerfen',fn:()=>{teardownEdit();}}]);
@@ -2391,7 +2319,7 @@ async function closeEditBox(apply){
   item.pendingText=newText;
   const rep=buildReplacement(item,font);
   const wc=widthCheck(page,item,rep.newAdv);
-  const approxNote=font.approxWidths?'<br><i>Hinweis: Breitenprüfung näherungsweise (Schrift ohne eingebettete Metriken).</i>':'';
+  const approxNote=font.approxWidths?'<br>Hinweis: Breitenprüfung näherungsweise (Schrift ohne eingebettete Metriken).':'';
   if(!wc.ok){
     // Statt zu überlappen: Text einpassen (Laufweite reduzieren), gleiche
     // Schrift/Größe/Position. Kleine Überbreiten automatisch, größere per
@@ -2504,7 +2432,6 @@ overlayDrop.addEventListener('drop',async e=>{
 });
 btnOpen.addEventListener('click',openPicker);
 btnSave.addEventListener('click',save);
-$('#dropzoneBox').addEventListener('click',()=>{ if(!btnOpen.disabled)openPicker(); });
 window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){ e.preventDefault(); save(); }
 });
@@ -2743,7 +2670,7 @@ function hBuildOutline(){
   const tabs=document.createElement('div'); tabs.className='outTabs';
   const mk=(id,label,title)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=label; b.title=title;
     b.className=hTab===id?'on':''; b.addEventListener('mousedown',ev=>{ ev.preventDefault(); if(hTab!==id){hTab=id;hBuildOutline();} }); tabs.appendChild(b); };
-  mk('inhalt','Inhalt ('+hs.length+')','Überschriften – Klick springt hin, × löscht den Abschnitt');
+  mk('inhalt','Inhalt ('+hs.length+')','Überschriften und Abschnitt-Aktionen');
   mk('texte','Texte ('+texts.length+')','Alle bearbeitbaren Textstellen – Klick öffnet die Bearbeitung');
   hOutlineEl.appendChild(tabs);
   if(hTab==='texte'){
@@ -2765,12 +2692,13 @@ function hBuildOutline(){
     a.textContent=h.textContent.trim();
     a.className='lvl'+Math.min(parseInt(h.tagName[1],10),4);
     a.href='#';
-    if(isHidden())a.title='Auf dem Bildschirm ausgeblendet (z. B. nur im Druck sichtbar) – Abschnitt-Löschen über × funktioniert trotzdem';
+    if(isHidden())a.title='Auf dem Bildschirm ausgeblendet (z. B. nur im Druck sichtbar)';
     a.addEventListener('click',ev=>{ ev.preventDefault();
       if(isHidden()){ flash('Dieser Abschnitt ist auf dem Bildschirm ausgeblendet (z. B. nur im Druck sichtbar)'); return; }
       h.scrollIntoView({block:'start'}); });
     const d=document.createElement('button');
-    d.type='button'; d.className='outDel'; d.textContent='×';
+    d.type='button'; d.className='outDel'; d.textContent='Abschnitt löschen…';
+    d.setAttribute('aria-label','Abschnitt löschen: '+h.textContent.trim());
     d.title='Ganzen Abschnitt löschen (Überschrift + Inhalt bis zur nächsten gleichrangigen Überschrift)';
     d.addEventListener('click',ev=>{ ev.preventDefault(); ev.stopPropagation(); hDeleteSectionFlow(h); });
     row.appendChild(a); row.appendChild(d);
@@ -2800,13 +2728,13 @@ function hSectionRun(h){
   }
   return run;
 }
-function hDeleteSectionFlow(h){
+async function hDeleteSectionFlow(h){
   if(mode!=='html'||!h||!h.isConnected)return;
   hCommitAndFold();
   if(srcText!==hHist[hHistPos])hPushHist();
   const run=hSectionRun(h);
-  const title=(h.textContent||'').trim().slice(0,60);
-  if(!confirm('Ganzen Abschnitt „'+title+'“ löschen?\n\n'+run.length+' Element'+(run.length===1?'':'e')+' inklusive Unterüberschriften und Inhalt.'))return;
+  if(!await window.confirmSectionDelete(h))return;
+  if(mode!=='html'||!h.isConnected)return;
   const checkpoint=srcText;
   let ok=true,failIdx=-1;
   for(let k=0;k<run.length;k++){
@@ -2838,7 +2766,7 @@ function hHookDoc(doc){
   hoverBox.style.cssText='position:fixed;pointer-events:none;z-index:2147483647;'+
     'border:1px solid rgba(37,99,235,.8);background:rgba(37,99,235,.07);border-radius:2px;display:none;';
   (doc.body||doc.documentElement).appendChild(hoverBox);
-  delBtn=makeDelBtn(doc); delTarget=null;
+  delBtn=null; delTarget=null;
   doc.addEventListener('scroll',hideDelBtn,true);
 }
 function hRectsContain(doc,t,x,y,tol){
@@ -2932,7 +2860,6 @@ function hFindTextAt(doc,x,y,deep){
 }
 function hHideHover(){ if(hoverBox)hoverBox.style.display='none'; }
 function hOnDocMove(e){
-  moveDelBtn(e);
   if(!hoverBox)return;
   if(editSpan&&editSpan.contains(e.target)){hHideHover();return;}
   const doc=hViewer.contentDocument;
@@ -2946,6 +2873,7 @@ function hOnDocMove(e){
   hoverBox.style.display='block';
 }
 function hOnDocClick(e){
+  hideDelBtn();
   const el=e.target&&e.target.closest?e.target:null;
   const link=el&&el.closest('a[href]');
   if(link)e.preventDefault();
@@ -3219,6 +3147,7 @@ function hUpdateStatus(){
 }
 
 function hOnKeydown(e){
+  if(e.key==='Escape'){hideDelBtn();hHideHover();}
   if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();save();return;}
   if((e.ctrlKey||e.metaKey)&&(e.key==='f'||e.key==='F')){e.preventDefault();findOpen();return;}
   if(undoKeyHandler(e))return;

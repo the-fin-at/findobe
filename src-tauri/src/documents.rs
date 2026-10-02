@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -25,6 +25,7 @@ struct Store {
     documents: HashMap<u64, Document>,
     print_html: Option<String>,
     allow_exit: bool,
+    pending_files: VecDeque<Vec<String>>,
 }
 #[derive(Serialize)]
 struct Opened {
@@ -32,6 +33,7 @@ struct Opened {
     name: String,
     path: String,
     text: String,
+    encoding: &'static str,
 }
 #[derive(Serialize)]
 struct Saved {
@@ -43,6 +45,16 @@ fn error(e: impl std::fmt::Display) -> String {
 }
 fn fingerprint(bytes: &[u8]) -> Vec<u8> {
     Sha256::digest(bytes).to_vec()
+}
+fn check_save_target(store: &Store, id: u64, destination: &Path) -> Result<()> {
+    if store
+        .documents
+        .iter()
+        .any(|(other_id, doc)| *other_id != id && doc.path == destination)
+    {
+        return Err("Diese Datei ist bereits in einem anderen Tab geöffnet. Bitte einen anderen Dateinamen wählen oder den anderen Tab zuerst schließen.".into());
+    }
+    Ok(())
 }
 fn main_only(window: &WebviewWindow) -> Result<()> {
     if window.label() == "main" {
@@ -58,12 +70,33 @@ fn supported(path: &Path) -> bool {
             .unwrap_or("")
             .to_lowercase()
             .as_str(),
-        "html" | "htm" | "md" | "markdown" | "txt"
+        "html" | "htm" | "md" | "markdown" | "txt" | "pdf"
     )
+}
+fn is_pdf(path: &Path) -> bool {
+    path.extension().and_then(|s| s.to_str()).is_some_and(|s| s.eq_ignore_ascii_case("pdf"))
+}
+fn validate_pdf(bytes: &[u8]) -> Result<()> {
+    if !bytes.iter().take(1024).copied().collect::<Vec<_>>().windows(5).any(|w| w == b"%PDF-") {
+        return Err("Das ist keine PDF-Datei.".into());
+    }
+    Ok(())
+}
+fn save_bytes(path: &Path, content: String) -> Result<Vec<u8>> {
+    let bytes = if is_pdf(path) {
+        if content.len() as u64 > (MAX_BYTES + 2) / 3 * 4 {
+            return Err("Das Dokument ist größer als 30 MB.".into());
+        }
+        let bytes = STANDARD.decode(content).map_err(error)?;
+        validate_pdf(&bytes)?;
+        bytes
+    } else { content.into_bytes() };
+    if bytes.len() as u64 > MAX_BYTES { return Err("Das Dokument ist größer als 30 MB.".into()); }
+    Ok(bytes)
 }
 fn read_document(path: &Path) -> Result<(PathBuf, String, Vec<u8>)> {
     if !supported(path) {
-        return Err("Bitte eine HTML-, Markdown- oder Textdatei öffnen.".into());
+        return Err("Bitte eine HTML-, PDF-, Markdown- oder Textdatei öffnen.".into());
     }
     let path = path.canonicalize().map_err(error)?;
     let meta = fs::metadata(&path).map_err(error)?;
@@ -71,9 +104,14 @@ fn read_document(path: &Path) -> Result<(PathBuf, String, Vec<u8>)> {
         return Err("Bitte eine Datei mit höchstens 30 MB auswählen.".into());
     }
     let bytes = fs::read(&path).map_err(error)?;
-    let text = String::from_utf8(bytes.clone()).map_err(|_| {
-        "Die Datei ist nicht UTF-8-kodiert. Bitte zuerst als UTF-8 speichern.".to_string()
-    })?;
+    let text = if is_pdf(&path) {
+        validate_pdf(&bytes)?;
+        STANDARD.encode(&bytes)
+    } else {
+        String::from_utf8(bytes.clone()).map_err(|_| {
+            "Die Datei ist nicht UTF-8-kodiert. Bitte zuerst als UTF-8 speichern.".to_string()
+        })?
+    };
     Ok((path, text, fingerprint(&bytes)))
 }
 fn register(path: &Path, state: &Mutex<Store>) -> Result<Opened> {
@@ -93,6 +131,7 @@ fn register(path: &Path, state: &Mutex<Store>) -> Result<Opened> {
         name: path.file_name().unwrap().to_string_lossy().into(),
         path: path.to_string_lossy().into(),
         text,
+        encoding: if is_pdf(&path) { "base64" } else { "utf8" },
     })
 }
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -131,8 +170,8 @@ async fn open_document(
         .file()
         .set_title("Dokument öffnen")
         .add_filter(
-            "HTML, Markdown und Text",
-            &["html", "htm", "md", "markdown", "txt"],
+            "HTML, PDF, Markdown und Text",
+            &["html", "htm", "pdf", "md", "markdown", "txt"],
         )
         .set_parent(&window)
         .blocking_pick_file();
@@ -156,6 +195,23 @@ fn release_document(window: WebviewWindow, id: u64, state: State<'_, Mutex<Store
     state.lock().map_err(error)?.documents.remove(&id);
     Ok(())
 }
+// Keep Finder requests until the frontend listener is ready (including cold launch).
+#[tauri::command]
+fn take_pending_files(
+    window: WebviewWindow,
+    state: State<'_, Mutex<Store>>,
+) -> Result<Option<Vec<String>>> {
+    main_only(&window)?;
+    Ok(state.lock().map_err(error)?.pending_files.pop_front())
+}
+
+#[cfg(target_os = "macos")]
+fn local_open_paths(urls: Vec<tauri::Url>) -> Vec<String> {
+    urls.into_iter()
+        .filter_map(|url| url.to_file_path().ok())
+        .filter_map(|path| path.into_os_string().into_string().ok())
+        .collect()
+}
 #[tauri::command]
 async fn save_document(
     window: WebviewWindow,
@@ -165,9 +221,6 @@ async fn save_document(
     state: State<'_, Mutex<Store>>,
 ) -> Result<Option<Saved>> {
     main_only(&window)?;
-    if content.len() as u64 > MAX_BYTES {
-        return Err("Das Dokument ist größer als 30 MB.".into());
-    }
     let doc = state
         .lock()
         .map_err(error)?
@@ -175,6 +228,7 @@ async fn save_document(
         .get(&id)
         .cloned()
         .ok_or("Bitte die Datei erneut öffnen.")?;
+    let bytes = save_bytes(&doc.path, content)?;
     let destination = if save_as {
         let extension = doc
             .path
@@ -211,16 +265,17 @@ async fn save_document(
         doc.path.clone()
     };
     let mut store = state.lock().map_err(error)?;
+    check_save_target(&store, id, &destination)?;
     let document = store
         .documents
         .get_mut(&id)
         .ok_or("Bitte die Datei erneut öffnen.")?;
     if destination == document.path {
-        write_document(document, content.as_bytes())?;
+        write_document(document, &bytes)?;
     } else {
-        atomic_write(&destination, content.as_bytes())?;
+        atomic_write(&destination, &bytes)?;
         document.path = destination.clone();
-        document.hash = fingerprint(content.as_bytes());
+        document.hash = fingerprint(&bytes);
     }
     Ok(Some(Saved {
         name: destination.file_name().unwrap().to_string_lossy().into(),
@@ -332,11 +387,53 @@ fn close_editor(window: WebviewWindow) -> Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .menu(|app| {
+            let menu = tauri::menu::Menu::default(app)?;
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::menu::{MenuItem, PredefinedMenuItem, Submenu};
+                // The predefined macOS Quit item calls NSApplication terminate:
+                // directly, bypassing Tauri's cancellable ExitRequested event.
+                let app_menu = Submenu::with_items(
+                    app,
+                    "FinDobe",
+                    true,
+                    &[
+                        &PredefinedMenuItem::about(app, Some("Über FinDobe"), None)?,
+                        &PredefinedMenuItem::separator(app)?,
+                        &PredefinedMenuItem::services(app, None)?,
+                        &PredefinedMenuItem::separator(app)?,
+                        &PredefinedMenuItem::hide(app, None)?,
+                        &PredefinedMenuItem::hide_others(app, None)?,
+                        &PredefinedMenuItem::separator(app)?,
+                        &MenuItem::with_id(
+                            app,
+                            "findobe-quit",
+                            "FinDobe beenden",
+                            true,
+                            Some("CmdOrCtrl+Q"),
+                        )?,
+                    ],
+                )?;
+                menu.remove_at(0)?;
+                menu.insert(&app_menu, 0)?;
+            }
+            Ok(menu)
+        })
+        .on_menu_event(|app, event| {
+            if event.id().as_ref() == "findobe-quit" {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_focus();
+                    let _ = window.emit("request-close", ());
+                }
+            }
+        })
         .manage(Mutex::new(Store::default()))
         .invoke_handler(tauri::generate_handler![
             open_document,
             open_path,
             release_document,
+            take_pending_files,
             save_document,
             read_resource,
             export_pdf,
@@ -355,6 +452,21 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("FinDobe konnte nicht gestartet werden")
         .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { ref urls } = event {
+                let paths = local_open_paths(urls.clone());
+                if !paths.is_empty() {
+                    if let Ok(mut store) = app.state::<Mutex<Store>>().lock() {
+                        store.pending_files.push_back(paths);
+                    }
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                        let _ = window.emit("files-pending", ());
+                    }
+                }
+            }
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
                 let allowed = app
                     .state::<Mutex<Store>>()
@@ -374,6 +486,40 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn save_target_protects_other_open_tabs() {
+        let mut store = Store::default();
+        store.documents.insert(
+            1,
+            Document {
+                path: PathBuf::from("/notes/a.md"),
+                hash: vec![],
+            },
+        );
+        store.documents.insert(
+            2,
+            Document {
+                path: PathBuf::from("/notes/b.md"),
+                hash: vec![],
+            },
+        );
+        assert!(check_save_target(&store, 1, Path::new("/notes/a.md")).is_ok());
+        assert!(check_save_target(&store, 1, Path::new("/notes/b.md")).is_err());
+        assert!(check_save_target(&store, 1, Path::new("/notes/c.md")).is_ok());
+        store.documents.remove(&2);
+        assert!(check_save_target(&store, 1, Path::new("/notes/b.md")).is_ok());
+    }
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn finder_paths_decode_unicode_and_ignore_remote_urls() {
+        assert_eq!(
+            local_open_paths(vec![
+                tauri::Url::parse("file:///tmp/Gr%C3%BC%C3%9Fe%20%23%20Notiz.md").unwrap(),
+                tauri::Url::parse("https://example.com/note.md").unwrap(),
+            ]),
+            vec!["/tmp/Grüße # Notiz.md"]
+        );
+    }
     #[test]
     fn roundtrip_preserves_bom_and_crlf() {
         let dir = tempfile::tempdir().unwrap();
@@ -397,6 +543,25 @@ mod tests {
         fs::write(&p, "<p>Extern</p>").unwrap();
         assert!(write_document(&mut doc, b"<p>Editor</p>").is_err());
         assert_eq!(fs::read_to_string(p).unwrap(), "<p>Extern</p>");
+    }
+    #[test]
+    fn binary_pdf_roundtrip_and_conflict_protection() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("binary.PDF");
+        let bytes = b"%PDF-1.7\n%\xff\xfe\x80\x00\n%%EOF";
+        fs::write(&p, bytes).unwrap();
+        let (path, encoded, hash) = read_document(&p).unwrap();
+        assert_eq!(save_bytes(&path, encoded).unwrap(), bytes);
+        let state = Mutex::new(Store::default());
+        assert_eq!(register(&p, &state).unwrap().encoding, "base64");
+        let mut doc = Document {path, hash};
+        let changed = b"%PDF-1.7\n%\xff\xfe\x80\x00\nnew content\n%%EOF";
+        write_document(&mut doc, changed).unwrap();
+        assert_eq!(fs::read(&p).unwrap(), changed);
+        fs::write(&p, bytes).unwrap();
+        assert!(write_document(&mut doc, changed).is_err());
+        assert!(save_bytes(&p, "broken base64".into()).is_err());
+        assert!(save_bytes(&p, STANDARD.encode(b"not a pdf")).is_err());
     }
     #[test]
     fn invalid_input_is_rejected() {

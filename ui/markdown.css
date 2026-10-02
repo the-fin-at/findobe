@@ -1,0 +1,31 @@
+/* Continuous Markdown editor and read-only preview. */
+body.mode-md #mdWrap{display:none!important}
+#markdownToolbar[hidden],#markdownWorkspace[hidden],#markdownEditor[hidden],#markdownPreview[hidden]{display:none}
+#markdownToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 26px;border-bottom:1px solid var(--line);background:#faf8f3}
+#markdownToolbar>span{font:10px 'Geist Mono',monospace;color:var(--muted)}#markdownToolbar>span span{padding:0 9px}
+#mdViewSwitch{display:flex;gap:3px;background:var(--paper);padding:3px;border:1px solid var(--line);border-radius:8px}
+#mdViewSwitch button{font:500 12px Geist,system-ui,sans-serif;cursor:pointer;padding:7px 17px;border:0;border-radius:5px;background:transparent;color:#514b43}
+#mdViewSwitch button[aria-pressed=true]{background:var(--ink);color:var(--paper)}#mdViewSwitch button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#markdownWorkspace{display:flex;flex:1;min-height:0;background:#fff;overflow:hidden}
+#markdownEditor,#markdownPreview{width:100%;height:100%;min-width:0;border:0}
+#markdownEditor .cm-editor{height:100%;color:var(--ink);font:16px/1.75 Geist,system-ui,sans-serif}
+#markdownEditor .cm-editor.cm-focused{outline:none}
+#markdownEditor .cm-scroller{overflow:auto;font-family:inherit}
+#markdownEditor .cm-content{padding:38px max(32px,calc((100% - 850px)/2)) 120px;min-height:100%;caret-color:var(--accent)}
+#markdownEditor .cm-line{padding:0 4px}
+#markdownEditor .cm-cursor{border-left-color:var(--accent)}
+#markdownEditor .cm-selectionBackground{background:#e9dac8!important}
+#markdownEditor .cm-placeholder{color:#9a9186}
+#markdownEditor .md-heading{font-weight:650;line-height:1.45;padding-top:12px;padding-bottom:8px}
+#markdownEditor .md-h1{font-size:1.85em}#markdownEditor .md-h2{font-size:1.5em}#markdownEditor .md-h3{font-size:1.25em}
+#markdownEditor .md-strongemphasis{font-weight:700}#markdownEditor .md-emphasis{text-decoration:underline}
+#markdownEditor .md-strikethrough{text-decoration:line-through}#markdownEditor .md-link{color:#37677d}
+#markdownEditor .md-inlinecode,#markdownEditor .md-code-line{font-family:'Geist Mono',monospace;background:#f5f1e8;font-size:.9em}
+#markdownEditor .md-quote{border-left:3px solid var(--line);color:#706658;padding-left:15px}
+#markdownEditor .md-bullet{color:var(--accent)}
+#markdownEditor.md-source .cm-editor{font:14px/1.7 'Geist Mono',monospace}
+#markdownEditor.md-source .cm-content{padding:28px 24px 100px}
+#markdownEditor .cm-gutters{background:#faf8f3;border-color:var(--line);color:var(--muted)}
+#markdownEditor .cm-panels{background:#faf8f3;color:var(--ink);border-color:var(--line);font:12px Geist,system-ui,sans-serif}
+#markdownEditor .cm-textfield,#markdownEditor .cm-button{font:12px Geist,system-ui,sans-serif;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink)}
+@media(max-width:950px){#markdownToolbar>span{display:none}}

@@ -7,7 +7,14 @@
     doc.querySelectorAll('script,iframe,object,embed,base,meta[http-equiv]').forEach(el => el.remove());
     for (const el of doc.querySelectorAll('*')) for (const attr of [...el.attributes]) if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
     // Copy styles and body attributes so the print result keeps the source layout.
-    for (const el of doc.head.querySelectorAll('style,link[rel="stylesheet"]')) document.head.appendChild(document.importNode(el, true));
+    const stylesReady = [];
+    for (const el of doc.head.querySelectorAll('style,link[rel="stylesheet"]')) {
+      const copy = document.importNode(el, true);
+      if (copy.tagName === 'LINK') stylesReady.push(new Promise(resolve => {
+        copy.onload = resolve; copy.onerror = resolve; setTimeout(resolve, 4000);
+      }));
+      document.head.appendChild(copy);
+    }
     for (const attr of [...doc.documentElement.attributes]) document.documentElement.setAttribute(attr.name, attr.value);
     for (const attr of [...doc.body.attributes]) document.body.setAttribute(attr.name, attr.value);
     document.body.innerHTML = doc.body.innerHTML;
@@ -20,6 +27,7 @@
     button.onclick = () => invoke('print_ready').catch(err => {toolbar.textContent = String(err);});
     toolbar.appendChild(button); document.body.prepend(toolbar);
     await Promise.all([...document.images].map(img => img.complete ? Promise.resolve() : new Promise(resolve => {img.onload = resolve; img.onerror = resolve; setTimeout(resolve, 4000);} )));
+    await Promise.all(stylesReady);
     await document.fonts.ready;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await invoke('print_ready');

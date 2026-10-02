@@ -1,6 +1,6 @@
 [package]
 name = "findobe"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 description = "FinDobe — der visuelle Dokumenteditor von THE-FIN"
 
@@ -20,4 +20,3 @@ base64 = "0.22"
 strip = true
 lto = "thin"
 codegen-units = 1
-
