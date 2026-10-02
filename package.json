@@ -6,7 +6,8 @@
     "dev": "tauri dev",
     "build": "tauri build",
     "build:editor": "node scripts/build-editor.mjs",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml && node --test tests/native-file-open.test.mjs"
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml && node --test tests/native-file-open.test.mjs",
+    "test:browser": "python3 scripts/run-browser-smokes.py"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.0",

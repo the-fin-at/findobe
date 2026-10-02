@@ -9,19 +9,23 @@ if (tabHost) {
   for (const id of ['zoomOut','zoomVal','zoomIn','zoomFit']) pdfTools.append($('#'+id));
   $('#documentbar').after(pdfTools);
 }
-let activeDocument = null, working = false, openingDocument = false, resourceCache = new Map();
+let activeDocument = null, working = false, openingDocument = false, actionPending = false, pdfViewPending = false, pdfHistoryPending = false, resourceCache = new Map();
 const call = (command, args = {}) => native.core.invoke(command, args);
 let htmlView = 'edit', previewScroll = 0;
 let markdownEditor = null, markdownView = 'write';
 const markdownPreview = $('#markdownPreview');
 // Native Markdown uses one continuous editor; no legacy text-span rendering.
 mRender = () => {};
-function renderMarkdownPreview() {
-  markdownPreview.srcdoc = safePreview(mExportHtml(), {readOnly:true});
+async function renderMarkdownPreview() {
+  const revision = ++markdownPreviewRevision, source = mExportHtml();
+  await refreshResources(source);
+  if (revision !== markdownPreviewRevision || markdownView !== 'preview' || mode !== 'md') return;
+  markdownPreview.srcdoc = safePreview(source, {readOnly:true});
 }
 function setMarkdownView(view) {
   if (working || mode !== 'md' || !markdownEditor) return;
   markdownView = view;
+  markdownPreviewRevision++;
   findCloseBar();
   if (view === 'preview') renderMarkdownPreview();
   else markdownEditor.setMode(view);
@@ -142,18 +146,23 @@ recentRender = async () => {};
 savedStatusText = () => lastSaved ? '✓ Gespeichert · ' + lastSaved.toLocaleTimeString('de-AT', {hour:'2-digit', minute:'2-digit'}) : 'Keine Änderungen';
 
 save = async function nativeSave(saveAs = false) {
-  if (working || !activeDocument || !await flushEdits()) return false;
-  if (typeof saveAs !== 'boolean') saveAs = false;
-  if (!saveAs && !isDirty()) { flash('Alles gespeichert'); return true; }
-  setWorking(true, 'Speichere Dokument…');
+  // Reserve before the first await: flush may itself await a PDF commit.
+  if (working || actionPending || pdfViewPending || pdfHistoryPending || !activeDocument) return false;
+  actionPending = true; publishTabState();
   try {
+    if (!await flushEdits()) return false;
+    if (typeof saveAs !== 'boolean') saveAs = false;
+    if (!saveAs && !isDirty()) { flash('Alles gespeichert'); return true; }
+    setWorking(true, 'Speichere Dokument…');
     const mods = mode === 'pdf' ? collectMods() : null;
     const inc = mods?.size ? await buildIncrement(fileBytes, mods, model) : null;
     const bytes = mode === 'pdf' ? (inc?.bytes || fileBytes) : null;
     const content = bytes ? encodeBinary(bytes) : currentContent();
     const saved = await call('save_document', {id:activeDocument.id, content, saveAs});
     if (!saved) return false;
+    const moved = activeDocument.path !== saved.path;
     Object.assign(activeDocument, saved);
+    if (moved) resetResourceCache(activeDocument.id);
     handle.name = saved.name;
     if (mode === 'html') {
       srcText = hCurrentText(); hBaseline = srcText;
@@ -165,9 +174,14 @@ save = async function nativeSave(saveAs = false) {
       pdfBaseDirty = false;
     } else mdOrig = mdText;
     lastSaved = new Date(); hideError(); updateStatus(); reflectDocument();
+    if (moved && mode === 'md' && markdownView === 'preview') await renderMarkdownPreview();
+    if (moved && mode === 'html') {
+      await refreshResources(hCurrentText());
+      if (htmlView === 'preview') previewViewer.srcdoc = safePreview(hCurrentText(), {readOnly:true});
+    }
     return true;
   } catch (err) { showError('Speichern fehlgeschlagen: ' + err); return false; }
-  finally { setWorking(false); }
+  finally { actionPending = false; setWorking(false); }
 };
 
 function askUnsaved() {
@@ -187,43 +201,77 @@ async function mayLeave() {
   return choice === 'discard' || (choice === 'save' && await save());
 }
 
+// Each resource cache belongs to one document AND its current native path.
+let resourceState = null, markdownPreviewRevision = 0;
+function resetResourceCache(id) {
+  resourceState = {id, cache:new Map(), pending:new Map()};
+  resourceCache = resourceState.cache;
+  markdownPreviewRevision++;
+}
 function resourceKey(value, base = '') {
-  if (!value || /^(?:[a-z][\w+.-]*:|\/|#)/i.test(value)) return null;
+  if (!value) return null;
   try {
-    const resolved = new URL(value, 'https://local.invalid/' + base);
-    return decodeURIComponent(resolved.pathname.slice(1));
+    const decoded = decodeURIComponent(value.trim());
+    if (/^(?:[a-z][\w+.-]*:|[\/\\]|#)/i.test(decoded) || decoded.includes('\0')) return null;
+    // Keep a sentinel directory so ../ escaping the document root is rejected,
+    // rather than normalized into an unrelated allowed resource.
+    const resolved = new URL(decoded.replace(/\\/g, '/'), 'https://local.invalid/document/' + base);
+    if (!resolved.pathname.startsWith('/document/')) return null;
+    return decodeURIComponent(resolved.pathname.slice('/document/'.length));
   } catch { return null; }
 }
-async function cacheResources(text, id) {
-  const cache = new Map(), pending = new Set();
+async function cacheResources(text, state) {
+  const failures = new Set(), visited = new Set();
   async function fetchOne(key, depth = 0) {
-    if (!key || cache.has(key) || pending.has(key) || depth > 5 || pending.size > 200) return;
-    pending.add(key);
-    try {
-      let data = await call('read_resource', {id, relative:key});
-      if (/\.css$/i.test(key)) {
-        let css = new TextDecoder().decode(Uint8Array.from(atob(data.split(',')[1]), c => c.charCodeAt(0)));
-        const matches = [...css.matchAll(/url\(\s*['"]?([^'"\)]+)['"]?\s*\)/g)];
-        for (const match of matches) {
-          const child = resourceKey(match[1].trim(), key);
-          await fetchOne(child, depth + 1);
-          if (cache.has(child)) css = css.replace(match[0], 'url("' + cache.get(child) + '")');
+    if (!key || depth > 5 || visited.size >= 200) return;
+    visited.add(key);
+    if (state.cache.has(key)) return;
+    if (state.pending.has(key)) {
+      if (!await state.pending.get(key)) failures.add(key);
+      return;
+    }
+    const request = (async () => {
+      try {
+        let data = await call('read_resource', {id:state.id, relative:key});
+        if (/\.css$/i.test(key)) {
+          let css = new TextDecoder().decode(Uint8Array.from(atob(data.split(',')[1]), c => c.charCodeAt(0)));
+          for (const match of [...css.matchAll(/url\(\s*['"]?([^'"\)]+)['"]?\s*\)/g)]) {
+            const child = resourceKey(match[1].trim(), key);
+            // Avoid waiting on a CSS cycle in the same traversal.
+            if (child && !visited.has(child)) await fetchOne(child, depth + 1);
+            if (state.cache.has(child)) css = css.replace(match[0], 'url("' + state.cache.get(child) + '")');
+          }
+          data = cssDataUrl(css);
         }
-        const bytes = new TextEncoder().encode(css);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-        data = 'data:text/css;base64,' + btoa(binary);
-      }
-      cache.set(key, data);
-    } catch (_) { /* An unavailable resource must not prevent editing the text. */ }
+        state.cache.set(key, data);
+        return true;
+      } catch { return false; }
+    })();
+    state.pending.set(key, request);
+    try { if (!await request) failures.add(key); }
+    finally { state.pending.delete(key); }
   }
   const doc = new DOMParser().parseFromString(text, 'text/html');
   const refs = [...doc.querySelectorAll('img[src],link[rel="stylesheet"][href],image[href]')]
-    .map(el => resourceKey(el.getAttribute('src') || el.getAttribute('href')));
-  for (const m of text.matchAll(/url\(\s*['"]?([^'"\)]+)['"]?\s*\)/g)) refs.push(resourceKey(m[1].trim()));
-  for (const m of text.matchAll(/!\[[^\]]*\]\(([^\s)]+)(?:\s+"[^"]*")?\)/g)) refs.push(resourceKey(m[1]));
-  await Promise.all(refs.map(key => fetchOne(key)));
-  return cache;
+    .map(el => el.getAttribute('src') || el.getAttribute('href'));
+  for (const m of text.matchAll(/url\(\s*['"]?([^'"\)]+)['"]?\s*\)/g)) refs.push(m[1].trim());
+  for (const ref of refs) {
+    const key = resourceKey(ref);
+    if (key) await fetchOne(key);
+    else if (ref && !/^(?:data:|blob:|#)/i.test(ref)) failures.add(ref);
+  }
+  return failures;
+}
+async function refreshResources(source) {
+  const state = resourceState;
+  if (!state) return;
+  const failures = await cacheResources(source, state);
+  if (resourceState !== state) return;
+  const bar = $('#resourceNotice');
+  bar.hidden = !failures.size;
+  bar.textContent = failures.size
+    ? 'Einige Ressourcen konnten nicht geladen werden oder sind gesperrt: ' + [...failures].slice(0,5).join(', ')
+      + '. Lokale Dateien müssen im Dokumentordner liegen.' : '';
 }
 function cssDataUrl(css) {
   const bytes = new TextEncoder().encode(css);
@@ -297,9 +345,10 @@ function encodeBinary(bytes) {
 // All PDF mutations share one busy period, including Enter/blur commits.
 const originalPdfApplyEdit = applyEdit;
 applyEdit = async (...args) => {
+  const restoreFocus = !!document.activeElement?.closest?.('.titem,#editBox');
   setWorking(true, 'Aktualisiere PDF…');
   try { return await originalPdfApplyEdit(...args); }
-  finally { setWorking(false); }
+  finally { setWorking(false); if (restoreFocus) focusPdfItem(); }
 };
 const originalClosePdfEdit = closeEditBox;
 let pdfCommit = null;
@@ -309,20 +358,50 @@ closeEditBox = async apply => {
   try { return await pdfCommit; }
   finally { pdfCommit = null; }
 };
-const originalPdfSetZoom = setZoom;
-setZoom = async z => { if (!working && await flushEdits()) await originalPdfSetZoom(z); };
-const originalPdfFitZoom = fitZoom;
-fitZoom = async rerender => {
-  if (editState || pdfCommit) { await closeEditBox(true); if (editState) return; }
-  return originalPdfFitZoom(rerender);
-};
+const originalPdfSetZoom = setZoom, originalPdfFitZoom = fitZoom;
+async function changePdfView(action) {
+  if (working || actionPending || pdfViewPending || pdfHistoryPending) return;
+  if (tabHost && window.frameElement.hidden) return;
+  const restoreFocus = !!document.activeElement?.closest?.('.titem,#editBox');
+  pdfViewPending = true; publishTabState();
+  try {
+    if (!await flushEdits()) return;
+    setWorking(true, 'Passe PDF-Ansicht an…');
+    await action();
+  } catch (err) { showError('PDF-Ansicht konnte nicht aktualisiert werden: ' + err); }
+  finally { pdfViewPending = false; setWorking(false); if (restoreFocus) focusPdfItem(); }
+}
+setZoom = z => changePdfView(() => originalPdfSetZoom(z));
+fitZoom = rerender => rerender ? changePdfView(() => originalPdfFitZoom(true)) : originalPdfFitZoom(false);
+for (const name of ['pdfUndo','pdfRedo']) {
+  const original = name === 'pdfUndo' ? pdfUndo : pdfRedo;
+  const action = async () => {
+    if (working || actionPending || pdfViewPending || pdfHistoryPending) return;
+    const restoreFocus = !!document.activeElement?.closest?.('.titem,#editBox');
+    pdfHistoryPending = true; setWorking(true, 'Aktualisiere PDF-Verlauf…');
+    try { await original(); }
+    finally { pdfHistoryPending = false; setWorking(false); if (restoreFocus) focusPdfItem(); }
+  };
+  if (name === 'pdfUndo') pdfUndo = action; else pdfRedo = action;
+}
+function mdHtmlForResources(text) { return mdParse(text).html; }
 async function loadNative(opened) {
   const old = activeDocument;
   const bytes = opened.encoding === 'base64' ? Uint8Array.from(atob(opened.text), c => c.charCodeAt(0)) : new TextEncoder().encode(opened.text);
   const h = {name:opened.name, getFile:async () => new File([bytes], opened.name)};
-  resourceCache = /\.pdf$/i.test(opened.name) ? new Map() : await cacheResources(opened.text, opened.id);
+  resetResourceCache(opened.id);
+  if (!/\.pdf$/i.test(opened.name)) {
+    const source = /\.html?$/i.test(opened.name) ? opened.text : mdHtmlForResources(opened.text);
+    await refreshResources(source);
+  }
   if (/\.html?$/i.test(opened.name)) await hLoadBytes(h, bytes);
-  else if (/\.pdf$/i.test(opened.name)) await loadPdfBytes(h, bytes);
+  else if (/\.pdf$/i.test(opened.name)) {
+    try { await loadPdfBytes(h, bytes); }
+    catch (err) {
+      console.error('PDF load failed', err);
+      throw new Error('Diese PDF-Datei ist beschädigt oder hat eine nicht unterstützte Struktur. Bitte erneut als unverschlüsselte PDF exportieren.');
+    }
+  }
   else await mLoadBytes(h, bytes);
   if (handle !== h) { await call('release_document', {id:opened.id}); return; }
   markdownEditor?.destroy(); markdownEditor = null;
@@ -338,7 +417,7 @@ async function loadNative(opened) {
 }
 openPicker = async function nativeOpen(path) {
   if (tabHost) return tabHost.open(path);
-  if (working || openingDocument) return;
+  if (working || actionPending || pdfViewPending || pdfHistoryPending || openingDocument) return;
   openingDocument = true;
   try {
     if (!await mayLeave()) return;
@@ -351,14 +430,17 @@ openPicker = async function nativeOpen(path) {
 
 exportPdf = async () => {
   if (mode === 'pdf') return save(true);
-  if (working || !activeDocument || !await flushEdits()) return;
-  setWorking(true, 'Bereite PDF vor…');
+  if (working || actionPending || pdfViewPending || pdfHistoryPending || !activeDocument) return;
+  actionPending = true; publishTabState();
   try {
+    if (!await flushEdits()) return;
+    setWorking(true, 'Bereite PDF vor…');
+    await refreshResources(mode === 'html' ? hCurrentText() : mExportHtml());
     const html = safePreview(mode === 'html' ? hCurrentText() : mExportHtml());
     await call('export_pdf', {html:injectPrintCss(html), name:exportBaseName()});
     setNotice(IS_MAC ? 'PDF-Export: Im Druckdialog unten „PDF“ → „Als PDF sichern…“ wählen.' : 'PDF-Export: Im Druckdialog „Microsoft Print to PDF“ auswählen und speichern.');
   } catch (err) { showError('PDF-Export fehlgeschlagen: ' + err); }
-  finally { setWorking(false); }
+  finally { actionPending = false; setWorking(false); }
 };
 function onClick(selector, action) {
   $(selector).addEventListener('click', e => { e.preventDefault(); e.stopImmediatePropagation(); action(); }, true);
@@ -398,48 +480,45 @@ document.fonts.ready.then(() => {
   if (!handle && !matchMedia('(prefers-reduced-motion: reduce)').matches) $('#startupTitle').classList.add('typing');
 });
 function nativeShortcut(e) {
-  if (tabHost && tabHost.shortcut(e)) return;
+  if (tabHost && tabHost.shortcut(e)) return true;
   if (!(e.metaKey || e.ctrlKey)) return;
   const key = e.key.toLowerCase();
   if (document.querySelector('dialog[open]') && /^(z|y|o|p|s|f)$/.test(key)) {
-    e.preventDefault(); e.stopImmediatePropagation(); return;
+    e.preventDefault(); e.stopImmediatePropagation(); return true;
   }
   if (mode === 'md' && markdownEditor && (key === 'z' || key === 'y')) {
     if (e.target.closest?.('.cm-search') && e.target.matches('input,textarea')) {
-      e.stopImmediatePropagation(); return;
+      e.stopImmediatePropagation(); return true;
     }
     e.preventDefault(); e.stopImmediatePropagation();
     if (markdownView !== 'preview') {
       if (key === 'y' || e.shiftKey) markdownEditor.redo(); else markdownEditor.undo();
     }
-    return;
+    return true;
   }
   if (mode === 'md' && key === 'f') {
-    e.preventDefault(); e.stopImmediatePropagation(); findOpen(); return;
+    e.preventDefault(); e.stopImmediatePropagation(); findOpen(); return true;
   }
   if (htmlView === 'preview' && (key === 'z' || key === 'y')) {
     // Preview is read-only, including editor shortcuts while a toolbar button has focus.
-    e.preventDefault(); e.stopImmediatePropagation(); return;
+    e.preventDefault(); e.stopImmediatePropagation(); return true;
   }
   if (key === 'o' || key === 's' || key === 'p') {
     e.preventDefault(); e.stopImmediatePropagation();
     if (key === 'o') openPicker(); else if (key === 'p') exportPdf(); else save(e.shiftKey);
+    return true;
   } else if (key === 'f' && htmlView === 'preview') {
-    e.preventDefault(); e.stopImmediatePropagation(); findOpen();
+    e.preventDefault(); e.stopImmediatePropagation(); findOpen(); return true;
   }
+  return false;
 }
+window.handleDocumentShortcut = nativeShortcut;
 window.addEventListener('keydown', nativeShortcut, true);
 for (const frame of [hViewer, mViewer]) frame.addEventListener('load', () => {
   reflectDocument();
   const doc = frame.contentDocument;
   if (!doc) return;
-  doc.addEventListener('keydown', e => {
-    if (tabHost && tabHost.shortcut(e)) return;
-    if ((e.metaKey || e.ctrlKey) && /^(o|p|s)$/i.test(e.key)) {
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (e.key.toLowerCase() === 'o') openPicker(); else if (e.key.toLowerCase() === 'p') exportPdf(); else save(e.shiftKey);
-    }
-  }, true);
+  doc.addEventListener('keydown', nativeShortcut, true);
   doc.addEventListener('click', e => {
     const link = e.target.closest && e.target.closest('a[href]');
     if (link && !link.getAttribute('href').startsWith('#')) e.preventDefault();
@@ -457,7 +536,7 @@ syncSaveUi();
 if (native && !tabHost && window.FinDobeFileOpen) window.FinDobeFileOpen({
   listen: (event, handler) => native.event.listen(event, handler),
   takeNext: () => call('take_pending_files'),
-  isBusy: () => working || openingDocument || !!document.querySelector('dialog[open]'),
+  isBusy: () => working || actionPending || pdfViewPending || pdfHistoryPending || openingDocument || !!document.querySelector('dialog[open]'),
   open: path => openPicker(path),
   reportError: message => showError(message)
 }).catch(error => showError('Dateiübergabe konnte nicht gestartet werden: ' + error));
@@ -470,7 +549,7 @@ if (tabHost) {
       await loadNative(opened);
       if (!activeDocument) throw new Error($('#errorbar').textContent || 'Dokument konnte nicht geöffnet werden.');
     },
-    info: () => ({...activeDocument, text:undefined, mode, editingPdf:mode === 'pdf' && !!editState, dirty:isDirty(), blocked:working || openingDocument || !!document.querySelector('dialog[open]')}),
+    info: () => ({...activeDocument, text:undefined, mode, editingPdf:mode === 'pdf' && !!editState, dirty:isDirty(), blocked:working || actionPending || pdfViewPending || pdfHistoryPending || openingDocument || !!document.querySelector('dialog[open]')}),
     flush: flushEdits,
     save: saveAs => save(saveAs),
     undo: async () => { if (await flushEdits()) await pdfUndo(); },
@@ -480,12 +559,16 @@ if (tabHost) {
     activate: async () => {
       markdownEditor?.measure();
       if (mode === 'pdf') {
-        setWorking(true, 'Passe PDF-Ansicht an…');
-        try { if (fitMode) await fitZoom(true); }
-        catch (err) { showError(String(err)); }
-        finally { setWorking(false); }
+        pdfRenderingActive = true;
+        if (fitMode) await fitZoom(true);
+        await renderVisiblePdfPages();
       }
     },
-    dispose: () => { isDirty = () => false; markdownEditor?.destroy(); }
+    deactivate: async () => { if (mode === 'pdf') await suspendPdfRendering(); },
+    dispose: () => {
+      isDirty = () => false; markdownEditor?.destroy(); cancelPdfRendering(); pdfRenderingActive = false;
+      if (model) for (const page of model.pages) releasePdfCanvas(page);
+      pdfDoc?.destroy().catch(()=>{});
+    }
   };
 }

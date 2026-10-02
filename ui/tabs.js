@@ -33,7 +33,10 @@ function render() {
 }
 async function activate(tab, force=false) {
   if (!force && blocked()) return false;
-  if (active && active!==tab && !await active.api.flush()) return false;
+  if (active && active!==tab) {
+    if (!await active.api.flush()) return false;
+    await active.api.deactivate();
+  }
   active=tab;
   for (const item of tabs) item.frame.hidden=item!==tab;
   await tab?.api.activate();

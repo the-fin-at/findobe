@@ -51,7 +51,7 @@ test('opening while saving does not clear the existing busy state',async ()=>{
 });
 test('canceling unsaved decision never reads or replaces the requested file',async ()=>{
   let reads=0,loads=0;
-  const ctx={tabHost:false,working:false,openingDocument:false,mayLeave:async()=>false,
+  const ctx={tabHost:false,working:false,actionPending:false,pdfViewPending:false,pdfHistoryPending:false,openingDocument:false,mayLeave:async()=>false,
     setWorking:()=>{},call:async()=>{reads++;},loadNative:async()=>{loads++;},showError:()=>{}};
   vm.runInNewContext(openFunction,ctx);
   await ctx.openPicker('/tmp/next.md');

@@ -27,10 +27,11 @@
       <button id="btnSave" type="button" disabled>Speichern</button>
     </div>
   </header>
-  <div id="documentbar"><div class="document-name"><span id="fileType">DOKUMENT</span><span id="fileName">Keine Datei geöffnet</span></div><div id="htmlViewSwitch" role="group" aria-label="HTML-Ansicht" hidden><button id="btnEditView" type="button" aria-pressed="true">Bearbeiten</button><button id="btnPreviewView" type="button" aria-pressed="false">Vorschau</button></div><span id="status" class="neutral">Offline</span></div>
-  <div id="errorbar" hidden></div>
+  <div id="documentbar"><div class="document-name"><span id="fileType">DOKUMENT</span><span id="fileName">Keine Datei geöffnet</span></div><div id="htmlViewSwitch" role="group" aria-label="HTML-Ansicht" hidden><button id="btnEditView" type="button" aria-pressed="true">Bearbeiten</button><button id="btnPreviewView" type="button" aria-pressed="false">Vorschau</button></div><span id="status" role="status" aria-live="polite" aria-atomic="true" class="neutral">Offline</span></div>
+  <div id="errorbar" role="alert" hidden></div>
   <div id="markdownToolbar" hidden><div id="mdViewSwitch" role="group" aria-label="Markdown-Ansicht"><button data-md-view="write" aria-pressed="true">Schreiben</button><button data-md-view="source" aria-pressed="false">Quelltext</button><button data-md-view="preview" aria-pressed="false">Vorschau</button></div><span># Überschrift <span>·</span> **fett** <span>·</span> - Liste</span></div>
-  <div id="noticebar" hidden></div>
+  <div id="resourceNotice" role="status" aria-live="polite" hidden></div>
+  <div id="noticebar" role="status" aria-live="polite" hidden></div>
   <div id="findbar" hidden>
     <input id="findInput" type="text" placeholder="Suchen…" spellcheck="false">
     <span id="findCount"></span>
