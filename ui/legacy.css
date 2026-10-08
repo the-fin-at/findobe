@@ -21,7 +21,7 @@
   #noticebar[hidden] { display: none; }
   #legacyOpen { display: none; }
   #dropzone { flex: 1; display: grid; place-items: center; padding: 24px; background: #f1f5f9; }
-  #dropzone .box { border: 2px dashed #94a3b8; border-radius: 12px; padding: 48px 56px; text-align: center; color: #475569; background: #f8fafc; cursor: pointer; max-width: 46em; }
+  #dropzone .box { border: 2px dashed #94a3b8; border-radius: 12px; padding: 48px 56px; text-align: center; color: #475569; background: #f8fafc; cursor: default; max-width: 46em; }
   #dropzone .box b { color: #1e293b; }
   #dropzone .box p { margin: .4em 0; }
   #dropzone .warn { border-color: #dc2626; color: #991b1b; cursor: default; }
@@ -43,7 +43,7 @@
   #mdOutline a.lvl4, #hOutline a.lvl4 { padding-left: 48px; }
   #hOutline .outItem { display: flex; align-items: center; gap: 2px; }
   #hOutline .outItem a { flex: 1 1 auto; min-width: 0; }
-  #hOutline .outDel { flex: none; visibility: hidden; border: 0; background: none; color: #b91c1c; font: 14px/1 system-ui, sans-serif; cursor: pointer; padding: 2px 7px; border-radius: 4px; }
+  #hOutline .outDel { flex: none; visibility: visible; border: 0; background: none; color: #b91c1c; font: 14px/1 system-ui, sans-serif; cursor: pointer; padding: 2px 7px; border-radius: 4px; }
   #hOutline .outItem:hover .outDel { visibility: visible; }
   #hOutline .outDel:hover { background: #fee2e2; }
   #findbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border-bottom: 1px solid #cbd5e1; }
@@ -55,18 +55,18 @@
   #findbar .replonly { display: none; align-items: center; gap: 6px; }
   body.mode-html #findbar .replonly { display: inline-flex; }
   #findbar #replInput { width: 24ch; }
-  #hOutline .outItem.outHidden a { color: #94a3b8; font-style: italic; }
+  #hOutline .outItem.outHidden a { color: #94a3b8; font-style: normal; }
   #hOutline .outTabs { display: flex; gap: 4px; margin: 0 2px 8px; }
   #hOutline .outTabs button { flex: 1 1 0; font: inherit; font-size: 12px; padding: 4px 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #475569; cursor: pointer; white-space: nowrap; }
   #hOutline .outTabs button.on { background: #2563eb; color: #fff; border-color: #2563eb; }
   #hOutline .txtFilter { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 4px 7px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 0 0 6px; }
-  #hOutline .txtItem { display: block; color: #1e293b; text-decoration: none; padding: 3px 8px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  #hOutline .txtItem { width: 100%; text-align: left; font: inherit; border: 0; background: transparent; display: block; color: #1e293b; text-decoration: none; padding: 3px 8px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   #hOutline .txtItem:hover { background: #e2e8f0; }
   #hOutline .txtItem.txtSvg::before { content: '◇ '; color: #94a3b8; }
-  #hOutline .txtItem.txtHidden { color: #94a3b8; font-style: italic; }
+  #hOutline .txtItem.txtHidden { color: #94a3b8; font-style: normal; }
   #hOutline .txtItem.txtChanged { color: #b45309; font-weight: 600; }
   #hOutline .txtItem.txtChanged::after { content: ' ●'; }
-  #hOutline .txtMore { color: #94a3b8; font-style: italic; padding: 4px 8px; }
+  #hOutline .txtMore { color: #94a3b8; font-style: normal; padding: 4px 8px; }
   #findCount { color: #64748b; font-size: 12px; white-space: nowrap; }
   .titem.findhit { outline: 2px solid #f59e0b !important; background: rgba(245,158,11,.15) !important; }
   .titem.findcur { outline: 2px solid #ea580c !important; background: rgba(234,88,12,.25) !important; }
@@ -101,3 +101,11 @@
   #dropzone .recent button { display: block; width: 100%; box-sizing: border-box; text-align: left; font: inherit; padding: 5px 10px; margin: 3px 0; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #1e293b; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #dropzone .recent button:hover { background: #e2e8f0; }
   #dropzone .recent .when { color: #94a3b8; font-size: 11px; margin-left: 8px; }
+
+#hOutline button:focus-visible, .titem:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.pageWrap:focus-within .pageCtl { opacity: 1; }
+
+#resourceNotice { flex: none; padding: 6px 12px; background: #fef9c3; color: #854d0e; font-size: 13px; }
+#resourceNotice[hidden] { display: none; }
+
+#scroller { overflow-anchor: none; }

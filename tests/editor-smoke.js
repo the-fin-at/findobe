@@ -30,22 +30,18 @@ async page => {
   if (!print.html.includes('Korrigierter Text') || /<script/i.test(print.html)) throw new Error('PDF payload failed');
   await page.evaluate(() => {window.mockDocument={id:2,name:'demo.md',path:'/test/demo.md',text:'# Testtitel\r\n\r\nOriginaltext\r\n\r\n| Name | Wert |\r\n| --- | --- |\r\n| Eins | Zwei |\r\n'};});
   await page.locator('#btnOpen').click();
-  const md = page.frameLocator('#mviewer');
-  await md.getByText('Originaltext', {exact:true}).click();
-  await md.locator('[contenteditable]').fill('Markdown geändert');
-  await md.locator('[contenteditable]').press('Enter');
-  // Escape also leaves any pending insertion without changing the source.
-  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Quelltext',exact:true}).click();
+  const md = page.locator('#markdownEditor .cm-content');
+  await md.fill('# Testtitel\n\nMarkdown geändert\n\n| Name | Wert |\n| --- | --- |\n| Eins | Zwei |\n');
   await page.locator('#btnSave').click();
   await page.waitForFunction(() => window.mockWrites.length === 2);
   const markdown = await page.evaluate(() => window.mockWrites[1].content);
   if (markdown !== '# Testtitel\r\n\r\nMarkdown geändert\r\n\r\n| Name | Wert |\r\n| --- | --- |\r\n| Eins | Zwei |\r\n') throw new Error('Markdown roundtrip failed: ' + JSON.stringify(markdown));
-  await md.getByText('Markdown geändert', {exact:true}).click();
-  await md.locator('[contenteditable]').fill('Noch nicht gesichert');
+  await md.fill('Noch nicht gesichert');
   await page.locator('#btnOpen').click();
   await page.locator('#unsavedDialog[open]').waitFor();
   await page.getByRole('button', {name:'Abbrechen',exact:true}).click();
-  if (!await md.getByText('Noch nicht gesichert',{exact:true}).count()) throw new Error('Cancel lost content');
+  if (!await md.innerText().then(t=>t.includes('Noch nicht gesichert'))) throw new Error('Cancel lost content');
   await page.evaluate(() => {window.mockFailure=true;});
   await page.locator('#btnSave').click();
   await page.locator('#errorbar').filter({hasText:'extern verändert'}).waitFor();

@@ -1,27 +1,68 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "FinDobe",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "identifier": "at.the-fin.findobe",
-  "build": { "frontendDist": "../ui" },
+  "build": {
+    "frontendDist": "../ui",
+    "beforeBuildCommand": "npm run build:editor",
+    "beforeDevCommand": "npm run build:editor"
+  },
   "app": {
     "withGlobalTauri": true,
-    "windows": [{
-      "label": "main", "title": "FinDobe · THE-FIN", "width": 1240, "height": 840,
-      "minWidth": 880, "minHeight": 600, "backgroundColor": "#F5F1E8",
-      "dragDropEnabled": true
-    }],
+    "windows": [
+      {
+        "label": "main",
+        "url": "tabs.html",
+        "title": "FinDobe · THE-FIN",
+        "width": 1240,
+        "height": 840,
+        "minWidth": 880,
+        "minHeight": 600,
+        "backgroundColor": "#F5F1E8",
+        "dragDropEnabled": true
+      }
+    ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' data:; img-src 'self' data: blob:; font-src 'self' data:; frame-src 'self' blob: about:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'",
-      "capabilities": [{ "identifier": "main", "windows": ["main"], "permissions": ["core:default"] }]
+      "capabilities": [
+        {
+          "identifier": "main",
+          "windows": [
+            "main"
+          ],
+          "permissions": [
+            "core:default"
+          ]
+        }
+      ]
     }
   },
   "bundle": {
-    "active": true, "targets": ["app", "dmg", "nsis"],
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis"
+    ],
     "shortDescription": "HTML und Markdown visuell bearbeiten.",
     "category": "Productivity",
-    "icon": ["icons/icon.icns", "icons/icon.ico", "icons/32x32.png", "icons/128x128.png"],
-    "macOS": { "minimumSystemVersion": "12.0" },
-    "windows": { "nsis": { "displayLanguageSelector": false, "languages": ["German"] } }
+    "icon": [
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/32x32.png",
+      "icons/128x128.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": false,
+        "languages": [
+          "German"
+        ]
+      }
+    }
   }
 }

@@ -1,0 +1,29 @@
+{
+  "bundle": {
+    "fileAssociations": [
+      {
+        "ext": [
+          "md",
+          "markdown"
+        ],
+        "name": "Markdown-Dokument",
+        "contentTypes": [
+          "net.daringfireball.markdown"
+        ],
+        "role": "Editor",
+        "rank": "Alternate"
+      },
+      {
+        "ext": [
+          "pdf"
+        ],
+        "name": "PDF-Dokument",
+        "contentTypes": [
+          "com.adobe.pdf"
+        ],
+        "role": "Editor",
+        "rank": "Alternate"
+      }
+    ]
+  }
+}

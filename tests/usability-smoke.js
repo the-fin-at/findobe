@@ -1,0 +1,63 @@
+async page => {
+  const errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.addInitScript(()=>{
+    window.testHtml='<!doctype html><html><body><section><h2>Erster Abschnitt</h2><p>Erster Text</p></section><section><h2>Zweiter Abschnitt</h2><p>Zweiter Text</p></section></body></html>';
+    window.mockWrites=[];
+    window.__TAURI__={core:{invoke:async(cmd,args)=>{
+      if(cmd==='open_document')return {id:1,name:'usability.html',path:'/test/usability.html',text:testHtml};
+      if(cmd==='save_document'){mockWrites.push(args.content);return {name:'usability.html',path:'/test/usability.html'};}
+      if(cmd==='read_resource')throw 'not available';
+      if(cmd==='release_document')return;
+      throw Error(cmd);
+    }},event:{listen:async()=>()=>{}}};
+  });
+  await page.goto('http://127.0.0.1:17893');
+  await page.locator('#startupTitle.typing').waitFor();
+  const motion=await page.locator('.typed-text').evaluate(el=>({font:getComputedStyle(el).fontFamily,style:getComputedStyle(el).fontStyle,animations:el.getAnimations().map(a=>a.animationName)}));
+  if(!motion.font.includes('Geist Mono')||motion.style!=='normal'||!motion.animations.includes('fin-type'))throw Error('Startup typography or animation missing');
+  await page.locator('.typed-text').evaluate(async el=>{await Promise.all(el.getAnimations().map(a=>a.finished));});
+  if(await page.locator('#startupTitle').innerText()!=='The Future is Now.')throw Error('Wrong heading');
+  const uiText=await page.locator('body').innerText();
+  if(/klare Dokumente|Dein Dokument|Direkt bearbeitbar|WENIGER TECHNIK|So einfach/i.test(uiText))throw Error('Old promotional text remains');
+  await page.getByRole('heading',{name:'The Future is Now.',exact:true}).click();
+  if(await page.locator('body.file-loaded').count())throw Error('Heading still opens file dialog');
+  await page.locator('#btnStartOpen').click();
+  await page.locator('body.file-loaded').waitFor();
+  const frame=page.frameLocator('#hviewer');
+  await frame.getByText('Erster Text',{exact:true}).hover();
+  if(await frame.locator('#voxDelBtn').count())throw Error('Floating delete controls still present');
+  const request=page.getByRole('button',{name:'Abschnitt löschen: Erster Abschnitt',exact:true});
+  await request.click();
+  await page.locator('#deleteSectionDialog[open]').waitFor();
+  if(!await page.evaluate(()=>delHighlighted!==null))throw Error('Selection not shown');
+  await page.keyboard.press('Escape');
+  if(await page.evaluate(()=>delHighlighted!==null||isDirty()))throw Error('Escape did not cancel cleanly');
+  await request.click();
+  await page.mouse.click(5,5);
+  if(await page.evaluate(()=>document.querySelector('#deleteSectionDialog').open||delHighlighted!==null||isDirty()))throw Error('Outside click did not cancel cleanly');
+  await request.click();
+  await page.locator('#deleteSectionDialog').getByRole('button',{name:'Abbrechen',exact:true}).click();
+  if(await page.evaluate(()=>delHighlighted!==null||isDirty()))throw Error('Cancel did not clear selection');
+  await frame.getByText('Erster Text',{exact:true}).click({position:{x:30,y:8}});
+  await frame.locator('[contenteditable]').fill('Bearbeiteter Text');
+  await frame.locator('[contenteditable]').press('Enter');
+  await request.click();
+  await page.locator('#deleteSectionDialog').getByRole('button',{name:'Abschnitt löschen',exact:true}).click();
+  await frame.getByRole('heading',{name:'Erster Abschnitt'}).waitFor({state:'detached'});
+  await frame.getByRole('heading',{name:'Zweiter Abschnitt'}).waitFor();
+  if(!await page.evaluate(()=>isDirty())||await page.evaluate(()=>mockWrites.length))throw Error('Deletion saved without explicit save');
+  await page.keyboard.press('Meta+z');
+  await frame.getByText('Bearbeiteter Text',{exact:true}).waitFor();
+  await page.locator('#btnSave').click();
+  if(!await page.evaluate(()=>mockWrites.length===1&&mockWrites[0]===testHtml.replace('Erster Text','Bearbeiteter Text')))throw Error('Undo/source preservation failed');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto('http://127.0.0.1:17893');
+  const reduced=await page.locator('.typed-text').evaluate(el=>({animations:el.getAnimations().length,width:el.getBoundingClientRect().width,parent:el.parentElement.getBoundingClientRect().width}));
+  if(reduced.animations||Math.abs(reduced.width-reduced.parent)>3)throw Error('Reduced motion did not show static complete text');
+  await page.locator('#btnStartOpen').click();
+  await page.locator('body.file-loaded').waitFor();
+  if(errors.length)throw Error(errors.join('\n'));
+  return {startupTyping:true,geistMonoUpright:true,reducedMotion:true,noHoverDelete:true,escapeCancel:true,outsideCancel:true,buttonCancel:true,editingAfterCancel:true,confirmedDeletion:true,undoAndSourcePreservation:true,errors};
+}

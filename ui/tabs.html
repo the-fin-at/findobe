@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FinDobe · THE-FIN</title>
+  <link rel="stylesheet" href="assets/fonts.css">
+  <link rel="stylesheet" href="legacy.css">
+  <link rel="stylesheet" href="brand.css">
+  <link rel="stylesheet" href="tabs.css">
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand"><img src="assets/the-fin-logo.png" alt="THE-FIN"><div><strong>FinDobe</strong><small>THE-FIN / DOCUMENTS</small></div></div>
+    <button id="btnOpen" type="button">Datei öffnen…</button>
+    <div class="tab-actions">
+      <button id="btnSearch" type="button" disabled>Suchen</button>
+      <button id="btnSaveAs" type="button" disabled>Speichern unter…</button>
+      <button id="btnExpPdf" type="button" disabled>Als PDF exportieren</button>
+      <button id="btnSave" type="button" disabled>Speichern</button>
+    </div>
+  </header>
+  <div id="tabbar" hidden><div id="documentTabs" role="tablist" aria-label="Geöffnete Dokumente"></div><button id="addTab" title="Weitere Datei öffnen (⌘O / Strg+O)" aria-label="Weitere Datei öffnen">+</button></div>
+  <div id="shellError" role="alert" hidden></div>
+  <main id="documents">
+    <section id="welcome">
+      <div><h1 id="startupTitle" aria-label="The Future is Now."><span class="type-line" aria-hidden="true"><span class="typed-text">The Future is Now.</span></span></h1>
+      <button id="btnStartOpen" class="open-cta">Datei öffnen… <span aria-hidden="true">↗</span></button>
+      <p>HTML · PDF · MARKDOWN · TEXT</p></div>
+    </section>
+  </main>
+  <div id="shellDrop" hidden>Dateien hier ablegen</div>
+  <div id="tabAnnouncement" class="sr-only" aria-live="polite"></div>
+  <dialog id="closeTabDialog" aria-labelledby="closeTitle" aria-describedby="closeDescription">
+    <h2 id="closeTitle">Änderungen behalten?</h2><p id="closeDescription"></p>
+    <div><button data-close="cancel" autofocus>Abbrechen</button><button data-close="discard">Verwerfen</button><button data-close="save" class="primary">Speichern</button></div>
+  </dialog>
+  <script src="native-file-open.js"></script>
+  <script src="tabs.js"></script>
+</body>
+</html>
