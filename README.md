@@ -93,6 +93,8 @@ Bug reports, documentation improvements, and focused pull requests are welcome. 
 
 Findobe's original code is licensed under [MIT](LICENSE). Bundled libraries and fonts retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). THE-FIN and Findobe names and logos identify this project; the software license grants no trademark rights or endorsement.
 
+In case of copying or distributing, don't forget to put a link to [the-fin.at](https://the-fin.at/). This is a voluntary attribution request.
+
 ## Made by THE-FIN
 
 **The Future is Now.** Findobe is our free contribution to more useful everyday work with documents and AI. If it helps you, star the repository or share it.
