@@ -12,8 +12,11 @@
 <body>
   <header id="topbar">
     <div class="brand"><img src="assets/the-fin-logo.png" alt="THE-FIN"><div><strong>FinDobe</strong><small>THE-FIN / DOCUMENTS</small></div></div>
+    <button id="btnNew" type="button">Neues Dokument</button>
     <button id="btnOpen" type="button">Datei öffnen…</button>
     <div class="tab-actions">
+      <button id="btnCollaborate" type="button" disabled>Gemeinsam bearbeiten</button>
+      <button id="btnAgent" type="button">Agentenzugang</button>
       <button id="btnSearch" type="button" disabled>Suchen</button>
       <button id="btnSaveAs" type="button" disabled>Speichern unter…</button>
       <button id="btnExpPdf" type="button" disabled>Als PDF exportieren</button>
@@ -26,7 +29,7 @@
     <section id="welcome">
       <div><h1 id="startupTitle" aria-label="The Future is Now."><span class="type-line" aria-hidden="true"><span class="typed-text">The Future is Now.</span></span></h1>
       <button id="btnStartOpen" class="open-cta">Datei öffnen… <span aria-hidden="true">↗</span></button>
-      <p>HTML · PDF · MARKDOWN · TEXT</p></div>
+      <p>FINDOBE · WORD · ODT · HTML · PDF · MARKDOWN · TEXT</p><button id="btnStartNew">Neues Dokument erstellen</button><button id="btnRecover" hidden>Entwürfe wiederherstellen</button></div>
     </section>
   </main>
   <div id="shellDrop" hidden>Dateien hier ablegen</div>
@@ -35,6 +38,8 @@
     <h2 id="closeTitle">Änderungen behalten?</h2><p id="closeDescription"></p>
     <div><button data-close="cancel" autofocus>Abbrechen</button><button data-close="discard">Verwerfen</button><button data-close="save" class="primary">Speichern</button></div>
   </dialog>
+  <dialog id="agentDialog"><h2>Agentenzugang</h2><p>Agenten lesen und bearbeiten deine geöffneten Dokumente über einen lokalen Zugang. Änderungen erscheinen direkt im Editor.</p><p id="agentConnection"></p><p>Das Werkzeug <code>scripts/findobe-agent.mjs</code> im Findobe-Projekt verbindet sich automatisch. Beispielsweise: <code>node scripts/findobe-agent.mjs list</code>.</p><button id="agentClose">Schließen</button></dialog>
+  <dialog id="recoveryDialog"><h2>Gesicherte Entwürfe</h2><p>Entwürfe werden als neue Dokumente geöffnet, damit vorhandene Dateien erhalten bleiben.</p><div id="recoveryList"></div><button id="recoveryClose">Schließen</button></dialog>
   <script src="native-file-open.js"></script>
   <script src="tabs.js"></script>
 </body>

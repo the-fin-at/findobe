@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--ui', type=pathlib.Path, default=ROOT / 'ui')
 parser.add_argument('--output', type=pathlib.Path, default=ROOT / 'test-results/browser-smokes')
-parser.add_argument('tests', nargs='*', default=['editor', 'preview', 'markdown', 'usability', 'tabs', 'pdf', 'review-fixes', 'pdf-cache'])
+parser.add_argument('tests', nargs='*', default=['editor', 'preview', 'markdown', 'usability', 'tabs', 'pdf', 'review-fixes', 'pdf-cache', 'document'])
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 

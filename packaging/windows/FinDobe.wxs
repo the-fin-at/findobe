@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="$(var.ProductCode)" Name="FinDobe" Manufacturer="THE-FIN"
+           Language="1033" Version="$(var.Version)" UpgradeCode="$(var.UpgradeCode)">
+    <Package Id="*" InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
+             Description="FinDobe - HTML and Markdown editor" />
+    <Media Id="1" Cabinet="FinDobe.cab" EmbedCab="yes" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPPRODUCTICON" Value="FinDobeIcon" />
+    <Icon Id="FinDobeIcon" SourceFile="$(var.IconPath)" />
+
+    <!-- System deployment requires the machine-wide Evergreen Runtime.
+         Do not download software or launch the app from an MSI custom action. -->
+    <Property Id="WEBVIEW2_VERSION" Secure="yes">
+      <RegistrySearch Id="WebView2Machine" Root="HKLM" Win64="no" Type="raw"
+        Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" />
+    </Property>
+    <!-- LaunchCondition rows are imported by build-msi.mjs because the macOS
+         wixl release does not support Product/Condition XML elements. -->
+
+    <!-- Stable UpgradeCode, version-specific ProductCode. Remove the old
+         version inside the transaction so installation failure can roll back. -->
+    <Upgrade Id="$(var.UpgradeCode)">
+      <UpgradeVersion Minimum="0.0.0" IncludeMinimum="yes" Maximum="$(var.Version)"
+        IncludeMaximum="no" Property="FINDOBE_OLD" MigrateFeatures="yes" />
+      <UpgradeVersion Minimum="$(var.Version)" IncludeMinimum="no"
+        OnlyDetect="yes" Property="FINDOBE_NEWER" />
+    </Upgrade>
+    <Property Id="FINDOBE_OLD" Secure="yes" />
+    <Property Id="FINDOBE_NEWER" Secure="yes" />
+    <InstallExecuteSequence>
+      <LaunchConditions After="AppSearch" />
+      <RemoveExistingProducts After="InstallInitialize" />
+    </InstallExecuteSequence>
+    <InstallUISequence>
+      <LaunchConditions After="AppSearch" />
+    </InstallUISequence>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="FinDobe">
+          <Component Id="MainExecutable" Guid="92A16689-FC08-4C4D-999D-0731FCD128C0" Win64="yes">
+            <File Id="FinDobeExe" Name="FinDobe.exe" Source="$(var.PayloadDir)/FinDobe.exe" KeyPath="yes" />
+          </Component>
+          <Component Id="WebViewLoader" Guid="D2B65AD4-F446-4F34-9EF1-34B7AE995AB9" Win64="yes">
+            <File Id="WebViewLoaderDll" Name="WebView2Loader.dll" Source="$(var.PayloadDir)/WebView2Loader.dll" KeyPath="yes" />
+          </Component>
+          <Component Id="EditorLicenses" Guid="C8BAED6A-AFA6-46E3-BB0B-E14C5CBFB83D" Win64="yes">
+            <File Id="EditorLicenseFile" Name="Markdown-editor-LICENSES.txt" Source="$(var.AssetsDir)/Markdown-editor-LICENSES.txt" KeyPath="yes" />
+          </Component>
+          <Component Id="SanitizerLicense" Guid="721EBE84-97B9-451E-80C4-701DBFCE7ADF" Win64="yes">
+            <File Id="SanitizerLicenseFile" Name="DOMPurify-LICENSE.txt" Source="$(var.AssetsDir)/DOMPurify-LICENSE" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="FinDobeMenu" Name="FinDobe">
+          <Component Id="StartMenu" Guid="B7DDF6C1-07B2-4580-8E17-556F7D506596" Win64="yes">
+            <Shortcut Id="FinDobeShortcut" Name="FinDobe" Target="[INSTALLFOLDER]FinDobe.exe"
+              WorkingDirectory="INSTALLFOLDER" Icon="FinDobeIcon" Description="HTML and Markdown editor" />
+            <RegistryValue Root="HKLM" Key="Software\THE-FIN\FinDobe" Name="Version"
+              Type="string" Value="[ProductVersion]" KeyPath="yes" />
+            <RemoveFolder Id="RemoveFinDobeMenu" On="uninstall" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+    <Feature Id="Complete" Title="FinDobe" Level="1" Absent="disallow">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="WebViewLoader" />
+      <ComponentRef Id="EditorLicenses" />
+      <ComponentRef Id="SanitizerLicense" />
+      <ComponentRef Id="StartMenu" />
+    </Feature>
+  </Product>
+</Wix>

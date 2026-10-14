@@ -152,6 +152,7 @@ save = async function nativeSave(saveAs = false) {
   try {
     if (!await flushEdits()) return false;
     if (typeof saveAs !== 'boolean') saveAs = false;
+    saveAs = saveAs || !!activeDocument.draft;
     if (!saveAs && !isDirty()) { flash('Alles gespeichert'); return true; }
     setWorking(true, 'Speichere Dokument…');
     const mods = mode === 'pdf' ? collectMods() : null;
@@ -161,7 +162,7 @@ save = async function nativeSave(saveAs = false) {
     const saved = await call('save_document', {id:activeDocument.id, content, saveAs});
     if (!saved) return false;
     const moved = activeDocument.path !== saved.path;
-    Object.assign(activeDocument, saved);
+    Object.assign(activeDocument, saved, {draft:false});
     if (moved) resetResourceCache(activeDocument.id);
     handle.name = saved.name;
     if (mode === 'html') {
@@ -399,7 +400,7 @@ async function loadNative(opened) {
     try { await loadPdfBytes(h, bytes); }
     catch (err) {
       console.error('PDF load failed', err);
-      throw new Error('Diese PDF-Datei ist beschädigt oder hat eine nicht unterstützte Struktur. Bitte erneut als unverschlüsselte PDF exportieren.');
+      throw new Error('PDF konnte nicht geladen werden (beschädigt oder nicht unterstützt): '+(err.message||err));
     }
   }
   else await mLoadBytes(h, bytes);
@@ -549,7 +550,16 @@ if (tabHost) {
       await loadNative(opened);
       if (!activeDocument) throw new Error($('#errorbar').textContent || 'Dokument konnte nicht geöffnet werden.');
     },
-    info: () => ({...activeDocument, text:undefined, mode, editingPdf:mode === 'pdf' && !!editState, dirty:isDirty(), blocked:working || actionPending || pdfViewPending || pdfHistoryPending || openingDocument || !!document.querySelector('dialog[open]')}),
+    info: () => ({...activeDocument, text:undefined, mode, loadStage:typeof pdfLoadStage==='string'?pdfLoadStage:undefined, rasterPages:mode==='pdf'?model?.pages.filter(p=>p.renderStamp).length:undefined, editingPdf:mode === 'pdf' && !!editState, dirty:isDirty(), blocked:working || actionPending || pdfViewPending || pdfHistoryPending || openingDocument || !!document.querySelector('dialog[open]')}),
+    toStructured: async () => {
+      if (!await flushEdits()) throw Error('Bearbeitung bitte zuerst abschließen.');
+      if (mode !== 'pdf') return {id:activeDocument.id,name:activeDocument.name,text:currentContent(),encoding:'utf8'};
+      const pages=[], mods=collectMods();
+      const source=mods.size?await pdfjsLib.getDocument({data:(await buildIncrement(fileBytes,mods,model)).bytes,isEvalSupported:false}).promise:pdfDoc;
+      try {for(let i=1;i<=source.numPages;i++){const page=await source.getPage(i);const text=await page.getTextContent();pages.push(text.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join(''));}}finally{if(source!==pdfDoc)await source.destroy();}
+      if(!pages.join('').trim())throw Error('Diese PDF enthält keinen Text. OCR ist nicht enthalten.');
+      return {id:activeDocument.id,name:activeDocument.name.replace(/\.pdf$/i,'.txt'),text:pages.join('\n\n'),encoding:'utf8',warnings:['PDF-Import übernimmt extrahierten Text. Seitenlayout, Bilder und Tabellenstruktur werden nicht rekonstruiert.']};
+    },
     flush: flushEdits,
     save: saveAs => save(saveAs),
     undo: async () => { if (await flushEdits()) await pdfUndo(); },

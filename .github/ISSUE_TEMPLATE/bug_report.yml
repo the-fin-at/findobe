@@ -1,0 +1,19 @@
+name: Bug report
+description: Report a reproducible problem using synthetic documents.
+body:
+  - type: markdown
+    attributes:
+      value: "Please keep private documents and agent tokens out of reports. Report vulnerabilities privately via the Security tab."
+  - type: input
+    id: environment
+    attributes:
+      label: Version and operating system
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include expected and actual behavior and a small synthetic example.
+    validations:
+      required: true

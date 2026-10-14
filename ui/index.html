@@ -60,12 +60,12 @@
   <div id="markdownWorkspace" hidden><div id="markdownEditor"></div><iframe id="markdownPreview" title="Markdown-Vorschau – nur lesen" sandbox="allow-same-origin allow-scripts" hidden></iframe></div>
   <div id="dropOverlay" hidden><div class="inner">Datei hier ablegen</div></div>
   <div id="busy"></div>
-  <footer><span id="hint">HTML-, PDF- oder Markdown-Datei öffnen.</span><span>THE-FIN <b>•</b> FinDobe 0.3.0</span></footer>
+  <footer><span id="hint">HTML-, PDF- oder Markdown-Datei öffnen.</span><span>THE-FIN <b>•</b> FinDobe 0.4.0</span></footer>
   <dialog id="unsavedDialog"><h2>Änderungen behalten?</h2><p>Das aktuelle Dokument enthält Änderungen, die noch nicht gespeichert sind.</p><div><button data-choice="cancel">Abbrechen</button><button data-choice="discard">Verwerfen</button><button class="primary" data-choice="save">Speichern</button></div></dialog>
   <dialog id="deleteSectionDialog" aria-labelledby="deleteSectionTitle" aria-describedby="deleteSectionDescription"><h2 id="deleteSectionTitle">Abschnitt löschen?</h2><p id="deleteSectionName"></p><p id="deleteSectionDescription">Die Überschrift und der zugehörige Inhalt werden entfernt. Rückgängig mit ⌘Z / Strg+Z. Die Datei wird erst beim Speichern geändert.</p><div><button data-delete-choice="cancel" autofocus>Abbrechen</button><button data-delete-choice="delete" class="danger">Abschnitt löschen</button></div></dialog>
 <script src="pdf.js"></script>
 <script src="pdf-lib.js"></script>
-<script src="pdf-worker-data.js"></script>
+<script src="pdf.worker.js"></script>
 <script src="editor.js"></script>
 <script src="purify.min.js"></script>
 <script src="markdown-editor.js"></script>

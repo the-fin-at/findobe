@@ -1,13 +1,17 @@
 {
   "name": "findobe",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
     "build:editor": "node scripts/build-editor.mjs",
-    "test": "cargo test --manifest-path src-tauri/Cargo.toml && node --test tests/native-file-open.test.mjs",
-    "test:browser": "python3 scripts/run-browser-smokes.py"
+    "build:msi": "node scripts/build-msi.mjs",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml && node --test tests/native-file-open.test.mjs tests/document-model.test.mjs",
+    "test:browser": "python3 scripts/run-browser-smokes.py",
+    "test:documents": "python3 scripts/run-browser-smokes.py document",
+    "test:native-documents": "node tests/native-document-e2e.mjs",
+    "test:native-app": "node scripts/test-native-app.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.0",
@@ -22,6 +26,33 @@
     "@codemirror/view": "^6.43.12",
     "@lezer/highlight": "^1.2.3",
     "@lezer/markdown": "^1.7.2",
-    "dompurify": "^3.4.15"
+    "@tiptap/core": "^3.32.0",
+    "@tiptap/extension-document": "^3.32.0",
+    "@tiptap/extension-image": "^3.32.0",
+    "@tiptap/extension-italic": "^3.32.0",
+    "@tiptap/extension-table": "^3.32.0",
+    "@tiptap/extension-text-align": "^3.32.0",
+    "@tiptap/extension-text-style": "^3.32.0",
+    "@tiptap/extension-unique-id": "^3.32.0",
+    "@tiptap/pm": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
+    "docx": "^9.11.0",
+    "dompurify": "^3.4.17",
+    "jszip": "^3.10.2",
+    "mammoth": "^1.13.0",
+    "marked": "^18.1.1",
+    "pdfmake": "^0.3.11",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "license": "MIT",
+  "description": "Free, local document editing for humans and agents. An open-source tool by THE-FIN.",
+  "homepage": "https://the-fin-at.github.io/findobe/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-fin-at/findobe.git"
+  },
+  "bugs": {
+    "url": "https://github.com/the-fin-at/findobe/issues"
   }
 }

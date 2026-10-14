@@ -23,6 +23,23 @@
         ],
         "role": "Editor",
         "rank": "Alternate"
+      },
+      {
+        "ext": [
+          "findobe"
+        ],
+        "name": "Findobe-Arbeitsdatei",
+        "role": "Editor",
+        "rank": "Alternate"
+      },
+      {
+        "ext": [
+          "docx",
+          "odt"
+        ],
+        "name": "Textdokument",
+        "role": "Editor",
+        "rank": "Alternate"
       }
     ]
   }

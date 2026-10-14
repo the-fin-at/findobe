@@ -1,0 +1,434 @@
+{
+  "format": "findobe",
+  "version": 1,
+  "revision": 2,
+  "document": {
+    "type": "doc",
+    "attrs": {
+      "title": "Mensch und Agent",
+      "layout": {
+        "footer": "Gemeinsam arbeiten",
+        "header": "THE-FIN / FINDOBE",
+        "margin": 56.7,
+        "orientation": "portrait",
+        "pageNumbers": true,
+        "size": "A4"
+      },
+      "comments": [
+        {
+          "id": "5f869688-0e86-4ab8-be58-b5c839dbbce5",
+          "target": "2c37252d-73a5-4151-ba6e-dda774034a0a",
+          "text": "Dieses Beispieldokument habe ich über den lokalen Agentenzugang erstellt. Du kannst es jetzt im selben Editor weiterbearbeiten.",
+          "author": "Findobe-Agent",
+          "resolved": false,
+          "at": "2026-10-13T22:18:24.310Z"
+        }
+      ],
+      "proposals": []
+    },
+    "content": [
+      {
+        "type": "heading",
+        "attrs": {
+          "id": "2c37252d-73a5-4151-ba6e-dda774034a0a",
+          "textAlign": null,
+          "level": 1
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Mensch und Agent"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "id": "8d761a6c-9eb9-418d-8e6c-cb3e488e7a83",
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Dieses Dokument kannst du direkt bearbeiten. Ein Agent kann dieselben Inhalte über den lokalen Findobe-Zugang lesen, gezielt ändern und kommentieren."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "id": "48a83893-6592-4886-b366-20df8f4e40d5",
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Zusammenarbeit ausprobieren"
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "attrs": {
+          "id": "8ff7dfbd-ae0f-4094-acd7-223b6b028dc6"
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "attrs": {
+              "id": "acdd3b90-1b56-41db-ac1b-5ebd1ec872a9"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "33ea9442-b0d9-4a3c-b3ab-d7a3028ce2f5",
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Schreibe direkt in einen Absatz und verwende die Formatierungsleiste."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "attrs": {
+              "id": "aef37b4e-57f1-4f82-a882-73974826e526"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "b1a97bf8-31c8-498d-9528-96ce62e8f7dd",
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Markiere eine Textstelle und ergänze rechts einen Kommentar."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "attrs": {
+              "id": "9ae74c52-1178-42ab-95fd-e9fb20e39f13"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "af695878-9c25-43e3-bc86-58cde9c66489",
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Lass deinen Agenten eine andere Stelle ändern oder einen Vorschlag hinterlassen."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "attrs": {
+              "id": "5248c8c5-4afd-4447-8655-224cb59016c0"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "id": "e54fb38c-d23c-4721-9031-a7aae537acad",
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Speichere die Arbeitsdatei oder öffne links die PDF-Vorschau."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "attrs": {
+          "id": "f82642df-a0b9-4f4a-a868-b5fd9b5b8c36"
+        },
+        "content": [
+          {
+            "type": "tableRow",
+            "attrs": {
+              "id": "6a033c08-5967-49a0-a1d4-5a48f06ae948"
+            },
+            "content": [
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "id": "984fb052-aa06-4985-a1c6-2a789b8d0e4b",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "030acfc7-dba7-4ff5-8ce1-35a6562c4520",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Mensch"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableHeader",
+                "attrs": {
+                  "id": "9639d271-d50e-44ff-bac3-5b61bdffce4c",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "aa31fa00-9407-490a-aefb-2ffa6cc1c3a7",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Agent"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "attrs": {
+              "id": "8ed6e0f7-e379-4567-a560-03a6ad0dd379"
+            },
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "id": "459b5823-2db7-4aa9-aef9-6cf28f82c339",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "e354c9c9-b1db-4b35-9c3e-421dd01bdf10",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Visuell schreiben und formatieren"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "id": "3aa8037d-4bb4-4801-bb9d-1af8538a5df1",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "075d7c6b-08ac-47f0-8eaf-7862ab5f229e",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Dokumentstruktur direkt lesen und ändern"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "attrs": {
+              "id": "dcee20f6-c6be-4ae1-838f-186243a92abd"
+            },
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "id": "baede0a5-298b-4386-ba21-dcd5da61f451",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "eeee3195-d3ce-4418-bc25-c49176214349",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Kommentare und Vorschläge prüfen"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "id": "bde4e014-5914-4ad5-9987-e21c8129903d",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "f557e02a-e08f-4fa9-9aff-a465a94c706f",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Kommentare und Vorschläge hinterlassen"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "attrs": {
+              "id": "2248d9a6-357e-4f50-bde3-e04ff75dff5e"
+            },
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "id": "830fd18a-35e0-431d-8f72-48bcc4de1f5f",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "1d7f857a-5042-46cc-b4ba-51a43d3de6eb",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Änderungen rückgängig machen"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "id": "27a66f9e-07c4-4b9e-98b8-2592a299b7ad",
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null,
+                  "align": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "id": "ebadae06-8244-4d71-8ff5-696c0f94388e",
+                      "textAlign": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Dieselbe Historie und Konfliktprüfung verwenden"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "id": "791c259b-9ee5-4020-9092-2a8b237f2ba6",
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Der vollständige Arbeitsstand bleibt in der Findobe-Datei. Für Kundendokumente stehen PDF, DOCX, ODT und weitere Ausgabeformate bereit."
+          }
+        ]
+      }
+    ]
+  },
+  "history": [
+    {
+      "id": "2403116c-466b-4ff1-855f-02024b6c982d",
+      "revision": 1,
+      "author": "Findobe-Agent",
+      "at": "2026-10-13T22:18:24.294Z",
+      "summary": "Gemeinsames Beispieldokument erstellt"
+    },
+    {
+      "id": "1432ef45-f2b0-4f8c-9e04-17bcd7dcbd63",
+      "revision": 2,
+      "author": "Findobe-Agent",
+      "at": "2026-10-13T22:18:24.316Z",
+      "summary": "Kommentar hinzugefügt"
+    }
+  ]
+}

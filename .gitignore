@@ -8,3 +8,13 @@ dist/
 .DS_Store
 test-results/
 .playwright-cli/
+
+# Local agent coordination and packaging output
+.herdr-project/
+*.log
+*.dmg
+*.msi
+*.exe
+*.app/
+*.p12
+*.pem

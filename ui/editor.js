@@ -584,6 +584,7 @@ function parsePageItems(page){
 let handle=null;
 let fileBytes=null;        // aktuelle Dateibasis (Original bzw. letzter Speicherstand)
 let libDoc=null;           // pdf-lib-Dokument (NUR lesend)
+let pdfLoadStage='idle';
 let pdfDoc=null;           // pdf.js-Dokument für die Anzeige (Arbeitsstand)
 let model=null;
 let zoom=1, fitMode=true;
@@ -637,13 +638,13 @@ if(IS_MAC){
   const dz=$('#dropzoneBox'); if(dz)dz.innerHTML=dz.innerHTML.replace(/Strg\+/g,'⌘');
 }
 
-/* pdf.js-Worker offline aus eingebettetem Base64 */
-(function(){
-  try{
-    const wb=Uint8Array.from(atob(WORKER_B64),c=>c.charCodeAt(0));
-    pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([wb],{type:'text/javascript'}));
-  }catch(e){ console.error('Worker-Setup fehlgeschlagen',e); }
-})();
+/* Native custom schemes cannot reliably import blob scripts under release CSP.
+   The bundled worker handler is loaded as a normal local script. PDF.js uses
+   its supported loopback transport, without relaxing the document CSP. */
+pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.js';
+// The pinned engine adapter retains display intent/annotations but does not
+// depend on paint callbacks while native agents work in the background.
+globalThis.__FIN_PDF_BACKGROUND_RENDER=!!(window.__TAURI__||window.parent?.__TAURI__);
 
 function busy(msg){ const b=$('#busy'); if(msg){b.textContent=msg;b.style.display='block';} else b.style.display='none'; }
 function showError(msg){ const b=$('#errorbar'); b.textContent=msg; b.hidden=false; }
@@ -822,6 +823,7 @@ async function recentRender(){
 recentRender();
 
 async function loadPdfBytes(h,bytes){
+  pdfLoadStage='parse';
   busy('Lade PDF…');
   try{
     if(L1.decode(bytes.subarray(0,1024)).indexOf('%PDF-')===-1){
@@ -853,8 +855,8 @@ async function loadPdfBytes(h,bytes){
     document.body.classList.remove('mode-html','mode-md');
     $('#hint').textContent='Textstelle: Klick oder Tab/Pfeiltasten · Enter/Leertaste = Bearbeiten · Esc = Abbrechen · '+KEY_SAVE+' = Speichern';
     handle=h; fileBytes=bytes; libDoc=doc; lastSaved=null;
-    buildModel(bytes);
-    await setPreviewDoc(fileBytes);
+    pdfLoadStage='model';buildModel(bytes);
+    pdfLoadStage='pdf-js';await setPreviewDoc(fileBytes);
     $('#fileName').textContent=h.name; $('#fileName').title=h.name;
     document.title=h.name+' – FinDobe v2.8';
     hideError();
@@ -864,7 +866,7 @@ async function loadPdfBytes(h,bytes){
         await h.requestPermission({mode:'readwrite'});
       }
     }catch(_){}
-    await initialRender();
+    pdfLoadStage='layout';await initialRender();pdfLoadStage='ready';
     updateStatus();
   } finally { busy(null); }
 }
@@ -2090,7 +2092,8 @@ async function setPreviewDoc(bytes){
   await pdfRenderQueue;
   const data=bytes.slice();          // pdf.js transferiert den Buffer
   const task=pdfjsLib.getDocument({data,isEvalSupported:false});
-  const doc=await task.promise;
+  let timer,doc;
+  try {doc=await Promise.race([task.promise,new Promise((_,reject)=>{timer=setTimeout(()=>{task.destroy().catch(()=>{});reject(Error('PDF konnte nicht innerhalb von 30 Sekunden geladen werden.'));},30000);})]);}finally{clearTimeout(timer);}
   if(pdfDoc){ try{ pdfDoc.destroy(); }catch(_){}}
   pdfDoc=doc;
 }
@@ -2135,7 +2138,7 @@ async function initialRender(){
   await fitZoom(false);
   await layoutPdfPages(false);
   pdfRenderingActive=!window.frameElement?.hidden;
-  await renderVisiblePdfPages();
+  pdfLoadStage='raster';await renderVisiblePdfPages();
   busy(null);
   updateDocNotice();
 }
