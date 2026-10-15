@@ -1,0 +1,12 @@
+import {build} from 'esbuild';
+import {mkdir,writeFile,readFile,rm} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+const dir='test-results/docx-import';
+await mkdir(dir,{recursive:true});
+await build({entryPoints:['tests/docx-import-browser.js'],bundle:true,outfile:dir+'/tests.js',format:'iife',target:'safari15'});
+const realPath=process.argv[2];
+if(realPath)await writeFile(dir+'/real-docx.json',JSON.stringify({name:'real.docx',encoding:'base64',text:(await readFile(realPath)).toString('base64')}));
+await writeFile(dir+'/index.html','<!doctype html><meta charset="utf-8"><link rel="icon" href="data:,"><script>window.hasRealFile='+!!realPath+'</script><script src="tests.js"></script>');
+const result=spawnSync('python3',['scripts/run-browser-smokes.py','--ui',dir,'docx-import'],{stdio:'inherit'});
+await rm(dir+'/real-docx.json',{force:true});
+process.exitCode=result.status??1;

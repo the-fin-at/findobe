@@ -1,6 +1,7 @@
 import DOMPurify from 'dompurify';
 import mammoth from 'mammoth/mammoth.browser';
 import JSZip from 'jszip';
+import {docxStyleOptions} from './docx-styles.js';
 import {marked} from 'marked';
 import TurndownService from 'turndown';
 import {gfm} from 'turndown-plugin-gfm';
@@ -37,8 +38,11 @@ export async function importFile(opened,readResource) {
   let html='',warnings=[];
   if(ext==='docx') {
     const zip=await zipRead(bytes);if(!zip.file('word/document.xml'))throw Error('Ungültige DOCX-Datei.');
-    const result=await mammoth.convertToHtml({arrayBuffer:bytes.buffer},{externalFileAccess:false,styleMap:["u => u","strike => s"]});
-    html=result.value;warnings.push('DOCX wird als bearbeitbarer Inhalt importiert. Seitenlayout, Felder, Fußnoten und Änderungsverfolgung können abweichen.',...result.messages.map(m=>m.message));
+    const options=await docxStyleOptions(zip);
+    const result=await mammoth.convertToHtml({arrayBuffer:await zip.generateAsync({type:'arraybuffer'})},{...options,externalFileAccess:false});
+    html=result.value;warnings.push('Word-Datei importiert. Das Seitenlayout und spezielle Word-Funktionen können abweichen.');
+    if(result.messages.some(m=>/Unrecognised .* style|was referenced but not defined/.test(m.message)))warnings.push('Einige Word-Formatvorlagen wurden vereinfacht übernommen.');
+    if(result.messages.some(m=>!/Unrecognised .* style|was referenced but not defined/.test(m.message)))warnings.push('Einige Word-Elemente konnten nicht vollständig übernommen werden. Bitte den Inhalt prüfen.');
   } else if(ext==='odt') { const result=await importOdt(bytes);html=result.html;warnings=result.warnings; }
   else if(ext==='md'||ext==='markdown') { html=marked.parse(opened.text.replace(/^\uFEFF/,''));warnings.push('Markdown wird in Dokumentbausteine umgewandelt; die ursprüngliche Schreibweise wird nicht erhalten.'); }
   else if(ext==='txt')html=opened.text.replace(/^\uFEFF/,'').split(/\r?\n/).map(p=>'<p>'+esc(p)+'</p>').join('');

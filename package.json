@@ -9,6 +9,7 @@
     "build:msi": "node scripts/build-msi.mjs",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml && node --test tests/native-file-open.test.mjs tests/document-model.test.mjs",
     "test:browser": "python3 scripts/run-browser-smokes.py",
+    "test:docx": "node scripts/test-docx-import.mjs",
     "test:documents": "python3 scripts/run-browser-smokes.py document",
     "test:native-documents": "node tests/native-document-e2e.mjs",
     "test:native-app": "node scripts/test-native-app.mjs"
