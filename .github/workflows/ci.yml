@@ -1,0 +1,51 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    name: Verify source
+    runs-on: macos-14
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - run: npm ci
+      - name: Rust and document model tests
+        run: npm test
+      - name: Build bundled editors
+        run: npm run build:editor
+      - name: Install pinned browser test runner
+        run: |
+          npm install --global @playwright/cli@0.1.17
+          playwright-cli install-browser chromium
+      - name: DOCX import regression
+        run: npm run test:docx
+      - name: Document browser smoke
+        run: npm run test:documents
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-diagnostics
+          path: test-results/browser-smokes/
+          if-no-files-found: ignore
